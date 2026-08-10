@@ -122,6 +122,7 @@ function plateHTML(idx, w, h, cols, rows, demand){
   '<div class="plate" style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:10px;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
       '<span class="ptitle" style="font-weight:700;font-size:14px;">拼板'+idx+'</span>'+
+      '<label style="font-size:12px;margin-left:8px;margin-right:auto;cursor:pointer;display:flex;align-items:center;gap:3px;"><input class="protate" type="checkbox" style="cursor:pointer;"> 旋转90°</label>'+
       '<button class="delBtn" style="border:1px solid #cbd5e1;border-radius:6px;background:#fff;font-size:12px;padding:3px 8px;cursor:pointer;">删除</button>'+
     '</div>'+
     '<div style="display:flex;gap:10px;margin-bottom:6px;">'+
@@ -171,6 +172,8 @@ function recalc(){
     p.querySelector('.ptitle').textContent = '拼板' + (i + 1);
     var w = toThousand(p.querySelector('.pw').value);
     var h = toThousand(p.querySelector('.ph').value);
+    var rotate = p.querySelector('.protate').checked;
+    if (rotate) { var tmp = w; w = h; h = tmp; }
     var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
     var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
     var demand = toCount(p.querySelector('.pdemand').value);
@@ -198,14 +201,12 @@ function recalc(){
     p.querySelector('.pPrint').textContent = '印数：' + ((valid && demand > 0n) ? String(print) : '—');
     list.push('拼版' + (i + 1) + '  共 ' + n + ' 个（成品尺寸：' + fmtThousand(w) + ' x ' + fmtThousand(h) + ' mm）');
   });
-  var dispW = (dir === 'h') ? totalW : totalH;
-  var dispH = (dir === 'h') ? totalH : totalW;
-  document.getElementById('sumSizeText').textContent = '拼版：' + fmtThousand(dispW) + ' × ' + fmtThousand(dispH) + ' mm   跳距：' + fmtThousand(dir === 'h' ? gy : gx) + 'mm';
-  var cutW = (dir === 'h') ? (totalW + 10000n) : (totalW + gx);
-  var cutH = (dir === 'h') ? (totalH + gy) : (totalH + 10000n);
-  var cutDispW = (dir === 'h') ? cutW : cutH;
-  var cutDispH = (dir === 'h') ? cutH : cutW;
-  document.getElementById('sumCut').textContent = '切料：' + fmtThousand(cutDispW) + ' × ' + fmtThousand(cutDispH) + ' mm';
+  var dispW = totalW;
+  var dispH = totalH;
+  document.getElementById('sumSizeText').textContent = '拼版：' + fmtThousand(dispW) + ' × ' + fmtThousand(dispH) + ' mm   跳距：' + fmtThousand(gy) + 'mm';
+  var cutW = totalW + 10000n;
+  var cutH = totalH + gy;
+  document.getElementById('sumCut').textContent = '切料：' + fmtThousand(cutW) + ' × ' + fmtThousand(cutH) + ' mm';
   document.getElementById('sumList').textContent = list.join('\n');
   var printText;
   if (maxPrintIdx > 0 && maxPrint > 0n) {
@@ -313,6 +314,8 @@ function drawDiagram(){
     plates.forEach(function(p, i){
       var w = toThousand(p.querySelector('.pw').value);
       var h = toThousand(p.querySelector('.ph').value);
+      var rotate = p.querySelector('.protate').checked;
+      if (rotate) { var tmp = w; w = h; h = tmp; }
       var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
       var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
       var ok = (w > 0n && h > 0n && cols > 0 && rows > 0);
