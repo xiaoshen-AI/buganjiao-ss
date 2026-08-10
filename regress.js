@@ -99,7 +99,7 @@ eq('纵向 切料', doc.getElementById('sumCut').textContent, '切料：' + R2.f
 ok('纵向 默认不超幅', doc.getElementById('sumWarn').style.display === 'none');
 // 示意图：纵向为「拼版排列方向旋转」，整版竖版、板1在上板2在下、单板不旋转
 const svgV = doc.getElementById('diagramSvg').innerHTML;
-const frameV = svgV.match(/<rect x="44" y="14" width="([\d.]+)" height="([\d.]+)" fill="#f8fafc"/);
+const frameV = svgV.match(/<rect x="18" y="10" width="([\d.]+)" height="([\d.]+)" fill="#f8fafc"/);
 const plateRectsV = [...svgV.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="#[0-9a-f]{6}14"/g)].map(m => ({ x: +m[1], y: +m[2], w: +m[3], h: +m[4] }));
 ok('纵向 整版框 高>宽(竖版，纸不旋转)', frameV && (+frameV[1]) < (+frameV[2]));
 ok('纵向 板1 在 板2 上方(堆叠顺序正确)', plateRectsV.length >= 2 && plateRectsV[0].y < plateRectsV[1].y);
@@ -107,7 +107,7 @@ ok('纵向 图例板尺寸未旋转(tw×th，含 129×212)', svgV.indexOf('129×
 doc.getElementById('dirH').click();
 // 示意图：横向恢复为左右并排、整版横版、板1在板2左侧
 const svgH = doc.getElementById('diagramSvg').innerHTML;
-const frameH = svgH.match(/<rect x="44" y="14" width="([\d.]+)" height="([\d.]+)" fill="#f8fafc"/);
+const frameH = svgH.match(/<rect x="18" y="10" width="([\d.]+)" height="([\d.]+)" fill="#f8fafc"/);
 const plateRectsH = [...svgH.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="#[0-9a-f]{6}14"/g)].map(m => ({ x: +m[1], y: +m[2], w: +m[3], h: +m[4] }));
 ok('横向 整版框 宽>高(横版)', frameH && (+frameH[1]) > (+frameH[2]));
 ok('横向 板1 在 板2 左侧(并排顺序正确)', plateRectsH.length >= 2 && plateRectsH[0].x < plateRectsH[1].x);
