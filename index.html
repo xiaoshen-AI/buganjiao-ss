@@ -2,10 +2,544 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=不干胶拼版计算器.html">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>不干胶拼版计算器</title>
+<style>
+@media(max-width:768px){
+#calcLayout{flex-direction:column!important}
+#calcLeft,#calcRight{flex:1 1 100%!important;min-width:0!important}
+#calcRight{margin-top:16px}
+input[type="text"],input[type="number"]{font-size:16px!important;min-height:38px}
+button{min-height:38px;font-size:14px!important}
+#sumSizeText,#sumCut,#sumList,#sumPrint{font-size:18px!important}
+#sumCheck{font-size:18px!important}
+h3{font-size:16px!important;margin-bottom:8px!important}
+#diagramSvg{padding:4px!important}
+.plate{padding:10px 12px!important}
+}
+</style>
 </head>
-<body>
-<p>正在跳转到 <a href="不干胶拼版计算器.html">不干胶拼版计算器</a>...</p>
+<body style="margin:0;padding:12px;background:#fff;">
+<div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
+  <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
+    <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.0</span></h3>
+
+  <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
+      <input id="gx" type="text" inputmode="decimal" value="3" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;">
+    </label>
+    <label style="flex:1;font-size:13px;">纵间隙 (mm)<br>
+      <input id="gy" type="text" inputmode="decimal" value="3" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;">
+    </label>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;">
+    <span style="color:#475569;">拼版方向：</span>
+    <button id="dirH" data-dir="h" style="padding:6px 12px;border:1px solid #3b82f6;border-radius:6px;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer;">横向拼版</button>
+    <button id="dirV" data-dir="v" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;font-size:13px;cursor:pointer;">纵向拼版</button>
+  </div>
+
+  <div id="plates"></div>
+
+  <button id="addBtn" style="margin:4px 0 16px;padding:8px 14px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;font-size:14px;cursor:pointer;">+ 添加拼板</button>
+
+  <div style="background:#f1f5f9;border-radius:10px;padding:16px 18px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="sumSizeText" style="font-size:24px;font-weight:700;line-height:1.5;white-space:nowrap;">拼版：126 × 344 mm   跳距：3mm</span>
+      <button id="copySizeBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:3px 10px;cursor:pointer;">复制</button>
+    </div>
+    <div id="sumCut" style="font-size:24px;font-weight:700;line-height:1.6;margin-top:4px;white-space:nowrap;">切料：136 mm</div>
+    <div id="sumList" style="font-size:24px;font-weight:700;line-height:1.6;white-space:pre-line;margin-top:4px;">拼版1  20 个
+拼版2  12 个</div>
+    <div id="sumPrint" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:nowrap;">模数：0个   印数：0</div>
+    <div id="sumWarn" style="font-size:13px;font-weight:600;color:#dc2626;margin-top:6px;display:none;">⚠ 超出纸张最大 300×352</div>
+    <div id="sumCheck" style="font-size:24px;font-weight:700;color:#ea580c;margin-top:10px;white-space:nowrap;letter-spacing:0.5px;">检查：数量、尺寸、印色、模数、印数、尺寸切料</div>
+  </div>
+  </div>
+  <div id="calcRight" style="flex:1 1 300px;min-width:260px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;">
+      <h3 style="margin:0;font-size:18px;">整版示意图</h3>
+      <button id="printPdfBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:4px 12px;cursor:pointer;">导出刀模PDF(1:1)</button>
+    </div>
+    <div id="diagramSvg" style="border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#fff;"></div>
+  </div>
+</div>
+</div>
+
+<script>
+var platesEl = document.getElementById('plates');
+var gxEl = document.getElementById('gx');
+var gyEl = document.getElementById('gy');
+var dir = 'h';
+
+function expandScientific(str){
+  var m = String(str).trim().match(/^([+-]?)(\d*\.?\d*|\.\d+)([eE]([+-]?\d+))?$/);
+  if (!m || m[2] === '' || m[2] === '.') return str;
+  var sign  = m[1];
+  var mant  = m[2] || '0';
+  var exp   = m[4] != null ? parseInt(m[4], 10) : 0;
+  var dot   = mant.indexOf('.');
+  var intp  = dot >= 0 ? mant.slice(0, dot)  : mant;
+  var frac  = dot >= 0 ? mant.slice(dot + 1) : '';
+  var total = intp + frac;
+  if (exp === 0) {
+    return (dot >= 0) ? sign + intp + '.' + frac : sign + intp;
+  }
+  if (exp > 0) {
+    if (exp >= frac.length) return sign + total + '0'.repeat(exp - frac.length);
+    var cut = intp.length + exp;
+    return sign + total.slice(0, cut) + '.' + total.slice(cut);
+  }
+  var shift = -exp;
+  if (shift <= intp.length) {
+    var idx = intp.length - shift;
+    return sign + intp.slice(0, idx) + '.' + intp.slice(idx) + frac;
+  }
+  return sign + '0.' + '0'.repeat(shift - intp.length) + total;
+}
+
+function toThousand(str){
+  str = expandScientific(str);
+  var s = String(str).trim().replace(/,/g, '');
+  if (s === '' || s === '-' || s === '.' || s === '+') return 0n;
+  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;
+  var neg = false;
+  if (s.charAt(0) === '-') { neg = true; s = s.slice(1); }
+  else if (s.charAt(0) === '+') { s = s.slice(1); }
+  var parts = s.split('.');
+  var intp = parts[0] === '' ? '0' : parts[0];
+  var frac = parts[1] || '';
+  frac = (frac + '000').slice(0, 3);
+  var digits = intp + frac;
+  digits = digits.replace(/^0+(?=\d)/, '');
+  var v = BigInt(digits === '' ? '0' : digits);
+  return neg ? -v : v;
+}
+
+function fmtThousand(v){
+  var sign = v < 0n ? '-' : '';
+  v = v < 0n ? -v : v;
+  var ip = v / 1000n;
+  var fp = v % 1000n;
+  if (fp === 0n) return sign + ip;
+  var fpStr = ('000' + fp).slice(-3).replace(/0+$/, '');
+  return sign + ip + '.' + fpStr;
+}
+
+function toCount(str){
+  str = expandScientific(str);
+  var s = String(str).trim().replace(/,/g, '');
+  if (s === '' || s === '.') return 0n;
+  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;
+  var neg = (s.charAt(0) === '-');
+  var body = (s.charAt(0) === '-' || s.charAt(0) === '+') ? s.slice(1) : s;
+  var intPart = body.split('.')[0].replace(/^0+(?=\d)/, '') || '0';
+  var v = BigInt(intPart);
+  return neg ? 0n : v;
+}
+
+function plateHTML(idx, w, h, cols, rows, demand){
+  return ''+
+  '<div class="plate" style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:10px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
+      '<span class="ptitle" style="font-weight:700;font-size:14px;">拼板'+idx+'</span>'+
+      '<label style="font-size:12px;margin-left:8px;margin-right:auto;cursor:pointer;display:flex;align-items:center;gap:3px;"><input class="protate" type="checkbox" style="cursor:pointer;"> 旋转90°</label>'+
+      '<button class="delBtn" style="border:1px solid #cbd5e1;border-radius:6px;background:#fff;font-size:12px;padding:3px 8px;cursor:pointer;">删除</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:10px;margin-bottom:6px;">'+
+      '<label style="flex:1;font-size:12px;">成品宽 (mm)<br><input class="pw" type="text" inputmode="decimal" value="'+(parseFloat(w)||0)+'" style="width:100%;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></label>'+
+      '<label style="flex:1;font-size:12px;">成品高 (mm)<br><input class="ph" type="text" inputmode="decimal" value="'+(parseFloat(h)||0)+'" style="width:100%;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></label>'+
+    '</div>'+
+    '<div style="display:flex;gap:10px;margin-bottom:8px;">'+
+      '<label style="flex:1;font-size:12px;">左右（列数）<br><input class="pcols" type="text" inputmode="decimal" value="'+cols+'" style="width:100%;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></label>'+
+      '<label style="flex:1;font-size:12px;">上下（行数）<br><input class="prows" type="text" inputmode="decimal" value="'+rows+'" style="width:100%;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></label>'+
+    '</div>'+
+    '<div style="display:flex;gap:10px;margin-bottom:8px;">'+
+      '<label style="flex:1;font-size:12px;">需求数量（个）<br><input class="pdemand" type="text" inputmode="decimal" value="'+demand+'" style="width:100%;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></label>'+
+    '</div>'+
+    '<div class="pResult" style="font-size:13px;font-weight:500;line-height:1.4;">拼版：0 × 0 mm</div>'+
+    '<div class="pCount" style="font-size:13px;font-weight:500;line-height:1.4;">共 0 个</div>'+
+    '<div class="pPrint" style="font-size:13px;font-weight:600;line-height:1.4;color:#2563eb;">印数：0</div>'+
+  '</div>';
+}
+
+function addPlate(w, h, cols, rows, demand){
+  var idx = platesEl.children.length + 1;
+  platesEl.insertAdjacentHTML('beforeend', plateHTML(idx, w, h, cols, rows, demand == null ? 0 : demand));
+  var p = platesEl.lastElementChild;
+  p.querySelectorAll('input').forEach(function(inp){
+    inp.addEventListener('input', recalc);
+    if (inp.classList.contains('pw') || inp.classList.contains('ph')) {
+      inp.addEventListener('blur', function(){
+        var v = parseFloat(inp.value);
+        if (!isNaN(v)) { inp.value = String(v); recalc(); }
+      });
+    }
+  });
+  p.querySelector('.delBtn').addEventListener('click', function(){
+    if(platesEl.children.length <= 1) return;
+    p.remove();
+    recalc();
+  });
+  recalc();
+}
+
+function recalc(){
+  var gx = toThousand(gxEl.value);
+  var gy = toThousand(gyEl.value);
+  var plates = platesEl.querySelectorAll('.plate');
+  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0;
+  plates.forEach(function(p, i){
+    p.querySelector('.ptitle').textContent = '拼板' + (i + 1);
+    var w = toThousand(p.querySelector('.pw').value);
+    var h = toThousand(p.querySelector('.ph').value);
+    var rotate = p.querySelector('.protate').checked;
+    if (rotate) { var tmp = w; w = h; h = tmp; }
+    var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
+    var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
+    var demand = toCount(p.querySelector('.pdemand').value);
+    var tw = 0n, th = 0n, n = 0, print = 0n;
+    var valid = (w > 0n && h > 0n && cols > 0 && rows > 0);
+    if (valid) {
+      tw = BigInt(cols) * w + BigInt(cols - 1) * gx;
+      th = BigInt(rows) * h + BigInt(rows - 1) * gy;
+      n = cols * rows;
+      if (demand > 0n) {
+        print = (demand + BigInt(n) - 1n) / BigInt(n);
+        if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; }
+      }
+      if (dir === 'h') {
+        totalW = totalW + tw + (firstValid ? 0n : gx);
+        if (th > totalH) totalH = th;
+      } else {
+        totalH = totalH + th + (firstValid ? 0n : gy);
+        if (tw > totalW) totalW = tw;
+      }
+      firstValid = false;
+    }
+    p.querySelector('.pResult').textContent = '拼版：' + fmtThousand(tw) + ' × ' + fmtThousand(th) + ' mm';
+    p.querySelector('.pCount').textContent = '共 ' + n + ' 个';
+    p.querySelector('.pPrint').textContent = '印数：' + ((valid && demand > 0n) ? String(print) : '—');
+    list.push('拼版' + (i + 1) + '  共 ' + n + ' 个（成品尺寸：' + fmtThousand(w) + ' x ' + fmtThousand(h) + ' mm）');
+  });
+  var dispW = totalW;
+  var dispH = totalH;
+  document.getElementById('sumSizeText').textContent = '拼版：' + fmtThousand(dispW) + ' × ' + fmtThousand(dispH) + ' mm   跳距：' + fmtThousand(gy) + 'mm';
+  var cutW = totalW + 10000n;
+  var cutH = totalH + gy;
+  document.getElementById('sumCut').textContent = '切料：' + fmtThousand(cutW) + ' × ' + fmtThousand(cutH) + ' mm';
+  document.getElementById('sumList').textContent = list.join('\n');
+  var printText;
+  if (maxPrintIdx > 0 && maxPrint > 0n) {
+    printText = '模数：' + String(maxPrintN) + '个   印数：' + String(maxPrint) + '（数量' + String(BigInt(maxPrintN) * maxPrint) + '个）';
+  } else {
+    printText = '模数：0个   印数：0';
+  }
+  document.getElementById('sumPrint').textContent = printText;
+  var warnEl = document.getElementById('sumWarn');
+  var overW, overH, overText;
+  if (dir === 'h') {
+    overW = 300000n; overH = 352000n;
+    overText = '⚠ 拼合尺寸超出纸张最大 300×352，请确认是否分版或换材料';
+  } else {
+    overW = 300000n; overH = 352000n;
+    overText = '⚠ 拼合尺寸超出纸张最大 352×300，请确认是否分版或换材料';
+  }
+  if (totalW > overW || totalH > overH) {
+    warnEl.style.display = 'block';
+    warnEl.textContent = overText;
+  } else {
+    warnEl.style.display = 'none';
+  }
+  fitSpanLine(document.getElementById('sumSizeText'), 24, 12);
+  fitBlockLine(document.getElementById('sumCut'), 24, 12);
+  fitMultiLine(document.getElementById('sumList'), 24, 12);
+  fitBlockLine(document.getElementById('sumPrint'), 24, 12);
+  fitBlockLine(document.getElementById('sumCheck'), 24, 10);
+  drawDiagram();
+}
+
+var _fitProbe = null;
+function fitProbe() {
+  if (!_fitProbe) {
+    _fitProbe = document.createElement('span');
+    _fitProbe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:nowrap;';
+    document.body.appendChild(_fitProbe);
+  }
+  return _fitProbe;
+}
+function fitBlockLine(el, base, minPx) {
+  el.style.fontSize = base + 'px';
+  var cur = base;
+  while (el.scrollWidth > el.clientWidth && cur > minPx) {
+    cur--;
+    el.style.fontSize = cur + 'px';
+  }
+}
+function fitSpanLine(el, base, minPx) {
+  var parent = el.parentNode;
+  var avail = parent.clientWidth;
+  for (var i = 0; i < parent.children.length; i++) {
+    if (parent.children[i] !== el) avail -= parent.children[i].offsetWidth + 10;
+  }
+  if (avail < 0) avail = 0;
+  var probe = fitProbe();
+  var cs = getComputedStyle(el);
+  probe.style.fontFamily = cs.fontFamily;
+  probe.style.fontWeight = cs.fontWeight;
+  probe.textContent = el.textContent;
+  var cur = base;
+  while (cur > minPx) {
+    probe.style.fontSize = cur + 'px';
+    if (probe.offsetWidth <= avail) break;
+    cur--;
+  }
+  el.style.fontSize = cur + 'px';
+  el.style.whiteSpace = 'nowrap';
+}
+function fitMultiLine(el, base, minPx) {
+  var parent = el.parentNode;
+  var pcs = getComputedStyle(parent);
+  var avail = parent.clientWidth - (parseFloat(pcs.paddingLeft) + parseFloat(pcs.paddingRight));
+  if (!(avail > 0)) avail = parent.clientWidth;
+  var probe = fitProbe();
+  var cs = getComputedStyle(el);
+  probe.style.fontFamily = cs.fontFamily;
+  probe.style.fontWeight = cs.fontWeight;
+  var lines = el.textContent.split('\n');
+  var cur = base;
+  while (cur > minPx) {
+    probe.style.fontSize = cur + 'px';
+    var maxW = 0;
+    for (var i = 0; i < lines.length; i++) {
+      probe.textContent = lines[i];
+      if (probe.offsetWidth > maxW) maxW = probe.offsetWidth;
+    }
+    if (maxW <= avail) break;
+    cur--;
+  }
+  el.style.fontSize = cur + 'px';
+}
+
+function drawDiagram(){
+  try {
+    var gx = toThousand(gxEl.value);
+    var gy = toThousand(gyEl.value);
+    var plates = platesEl.querySelectorAll('.plate');
+    var raw = [];
+    plates.forEach(function(p, i){
+      var w = toThousand(p.querySelector('.pw').value);
+      var h = toThousand(p.querySelector('.ph').value);
+      var rotate = p.querySelector('.protate').checked;
+      if (rotate) { var tmp = w; w = h; h = tmp; }
+      var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
+      var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
+      var ok = (w > 0n && h > 0n && cols > 0 && rows > 0);
+      if (!ok) return;
+      var tw = Number(BigInt(cols) * w + BigInt(cols - 1) * gx);
+      var th = Number(BigInt(rows) * h + BigInt(rows - 1) * gy);
+      raw.push({ tw: tw, th: th, n: cols * rows, cols: cols, rows: rows, idx: i + 1, w: Number(w), h: Number(h) });
+    });
+    var TW = 0, TH = 0, first = true;
+    var layout = [];
+    raw.forEach(function(b){
+      var x, y;
+      if (dir === 'h') {
+        x = (first ? 0 : TW + Number(gx));
+        y = 0;
+        TW += (first ? 0 : Number(gx)) + b.tw;
+        if (b.th > TH) TH = b.th;
+      } else {
+        x = 0;
+        y = (first ? 0 : TH + Number(gy));
+        TH += (first ? 0 : Number(gy)) + b.th;
+        if (b.tw > TW) TW = b.tw;
+      }
+      layout.push({ x: x, y: y, w: b.tw, h: b.th });
+      first = false;
+    });
+    var colors = ['#3b82f6','#16a34a','#9333ea','#ea580c','#0891b2','#db2777'];
+    var AREAW = 320, AREAH = 408, padX = 18, padTop = 10, padBottom = 22;
+    var USE_PATTERN = 30;
+    var svg = '';
+    if (TW > 0 && TH > 0) {
+      var drawTW = TW, drawTH = TH;
+      var drawW = AREAW - 2 * padX, drawH = AREAH - padTop - padBottom;
+      var scale = Math.min(drawW / drawTW, drawH / drawTH);
+      var bx = padX, by = padTop, bw = drawTW * scale, bh = drawTH * scale;
+      var defs = '';
+      raw.forEach(function(b, i){
+        var n = b.cols * b.rows;
+        if (n > USE_PATTERN) {
+          var cellw = b.w * scale, cellh = b.h * scale;
+          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
+          defs += '<pattern id="g' + i + '" width="' + (cellw + gapw) + '" height="' + (cellh + gaph) + '" patternUnits="userSpaceOnUse">';
+          defs += '<rect x="0" y="0" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+          defs += '</pattern>';
+        }
+      });
+      svg += '<svg viewBox="0 0 ' + AREAW + ' ' + AREAH + '" width="100%" style="display:block;">';
+      if (defs) svg += '<defs>' + defs + '</defs>';
+      svg += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>';
+      raw.forEach(function(b, i){
+        var L = layout[i];
+        var rx = L.x;
+        var ry = (dir === 'h') ? (TH - L.h) : L.y;
+        var rw = b.tw, rh = b.th;
+        var col = colors[i % colors.length];
+        var px = bx + rx * scale, py = by + ry * scale, pw = rw * scale, ph = rh * scale;
+        svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="' + col + '14" stroke="#dc2626" stroke-width="0.8"/>';
+        var n = b.cols * b.rows;
+        if (n > USE_PATTERN) {
+          svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="url(#g' + i + ')"/>';
+        } else {
+          var cellw = b.w * scale, cellh = b.h * scale;
+          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
+          for (var r = 0; r < b.rows; r++) {
+            for (var c = 0; c < b.cols; c++) {
+              var cellx = px + c * (cellw + gapw);
+              var celly = py + r * (cellh + gaph);
+              svg += '<rect x="' + cellx + '" y="' + celly + '" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+            }
+          }
+        }
+        var halo = 'paint-order="stroke" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"';
+        var legendDim = fmtThousand(BigInt(Math.round(b.tw))) + '×' + fmtThousand(BigInt(Math.round(b.th)));
+        svg += '<text x="' + (px + 3) + '" y="' + (py + 11) + '" font-size="9" fill="' + col + '" ' + halo + '>拼板' + b.idx + '</text>';
+        svg += '<text x="' + (px + 3) + '" y="' + (py + 21) + '" font-size="9" fill="' + col + '" ' + halo + '>' + legendDim + ' · ' + b.n + '个</text>';
+      });
+      svg += '<text x="' + (bx + bw / 2) + '" y="' + (by + bh + 18) + '" text-anchor="middle" font-size="12" fill="#475569" font-weight="600">整版 ' + fmtThousand(BigInt(Math.round(drawTW))) + ' × ' + fmtThousand(BigInt(Math.round(drawTH))) + ' mm</text>';
+      svg += '</svg>';
+    } else {
+      svg = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:13px;">暂无可绘制的有效拼板</div>';
+    }
+    document.getElementById('diagramSvg').innerHTML = svg;
+  } catch (e) {}
+}
+
+function copyText(t){
+  var done = function(){
+    var btn = document.getElementById('copySizeBtn');
+    if (!btn) return;
+    var old = btn.textContent;
+    btn.textContent = '已复制✓';
+    btn.style.color = '#16a34a';
+    btn.style.borderColor = '#16a34a';
+    setTimeout(function(){ btn.textContent = old; btn.style.color = '#2563eb'; btn.style.borderColor = '#2563eb'; }, 1200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done).catch(function(){ fallbackCopy(t, done); });
+  } else {
+    fallbackCopy(t, done);
+  }
+}
+function fallbackCopy(t, cb){
+  var ta = document.createElement('textarea');
+  ta.value = t; ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (cb) cb();
+}
+document.getElementById('copySizeBtn').onclick = function(){
+  var txt = document.getElementById('sumSizeText').textContent;
+  copyText(txt);
+};
+
+document.getElementById('printPdfBtn').onclick = printDiagram;
+function printDiagram(){
+  try {
+    var gx = toThousand(gxEl.value);
+    var gy = toThousand(gyEl.value);
+    var plates = platesEl.querySelectorAll('.plate');
+    var raw = [];
+    plates.forEach(function(p){
+      var w = toThousand(p.querySelector('.pw').value);
+      var h = toThousand(p.querySelector('.ph').value);
+      var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
+      var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
+      if (!(w > 0n && h > 0n && cols > 0 && rows > 0)) return;
+      var tw = Number(BigInt(cols) * w + BigInt(cols - 1) * gx);
+      var th = Number(BigInt(rows) * h + BigInt(rows - 1) * gy);
+      raw.push({ tw: tw, th: th, cols: cols, rows: rows, w: Number(w), h: Number(h) });
+    });
+    if (!raw.length) {
+      if (typeof alert === 'function') alert('暂无可导出的有效拼板，请先填写成品尺寸与行列数。');
+      return;
+    }
+    var TW = 0, TH = 0, first = true;
+    raw.forEach(function(b){
+      if (dir === 'h') {
+        TW += (first ? 0 : Number(gx)) + b.tw;
+        if (b.th > TH) TH = b.th;
+      } else {
+        TH += (first ? 0 : Number(gy)) + b.th;
+        if (b.tw > TW) TW = b.tw;
+      }
+      first = false;
+    });
+    var TWmm = TW / 1000, THmm = TH / 1000;
+    var cx = 0, cy = 0;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + TWmm + 'mm" height="' + THmm + 'mm" viewBox="0 0 ' + TWmm + ' ' + THmm + '" style="display:block;">';
+    raw.forEach(function(b){
+      var pw = b.tw / 1000, ph = b.th / 1000;
+      var px, py;
+      if (dir === 'h') { py = (TH - b.th) / 1000; px = cx; cx += pw + Number(gx) / 1000; }
+      else            { px = 0;                 py = cy; cy += ph + Number(gy) / 1000; }
+      var cellw = b.w / 1000, cellh = b.h / 1000;
+      var gapw = Number(gx) / 1000, gaph = Number(gy) / 1000;
+      for (var r = 0; r < b.rows; r++) {
+        for (var c = 0; c < b.cols; c++) {
+          var cellx = px + c * (cellw + gapw);
+          var celly = py + r * (cellh + gaph);
+          svg += '<rect x="' + cellx + '" y="' + celly + '" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#FF0000" stroke-width="0.2"/>';
+        }
+      }
+    });
+    svg += '</svg>';
+    var html =
+      '<' + '!DOCTYPE html><' + 'html lang="zh-CN"><' + 'head><' + 'meta charset="utf-8"><' + 'title>刀模线 1:1<' + '/title>' +
+      '<' + 'style>@page{size:' + TWmm + 'mm ' + THmm + 'mm;margin:0;}html,body{margin:0;padding:0;}svg{display:block;}<' + '/style><' + 'head><' + 'body>' +
+      svg +
+      '<' + 'script>window.onload=function(){setTimeout(function(){window.print();},200);};<' + '/script>' +
+      '<' + '/body><' + '/html>';
+    var w = window.open('', '_blank');
+    if (!w) {
+      if (typeof alert === 'function') alert('打印窗口被浏览器拦截。请允许本页面弹出窗口后重试。');
+      return;
+    }
+    w.document.open(); w.document.write(html); w.document.close();
+  } catch (e) {
+    if (typeof alert === 'function') alert('导出失败：' + (e && e.message ? e.message : e));
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+gxEl.oninput = recalc;
+gyEl.oninput = recalc;
+function setDir(d){
+  dir = d;
+  var h = document.getElementById('dirH'), v = document.getElementById('dirV');
+  if (d === 'h') {
+    h.style.background = '#3b82f6'; h.style.color = '#fff'; h.style.borderColor = '#3b82f6';
+    v.style.background = '#fff';   v.style.color = '#1f2937'; v.style.borderColor = '#cbd5e1';
+  } else {
+    v.style.background = '#3b82f6'; v.style.color = '#fff'; v.style.borderColor = '#3b82f6';
+    h.style.background = '#fff';   h.style.color = '#1f2937'; h.style.borderColor = '#cbd5e1';
+  }
+  recalc();
+}
+document.getElementById('dirH').onclick = function(){ setDir('h'); };
+document.getElementById('dirV').onclick = function(){ setDir('v'); };
+document.getElementById('addBtn').onclick = function(){ addPlate(40, 30, 1, 1, 0); };
+if (!platesEl.children.length) {
+  addPlate(30, 40, 4, 5, 0);
+  addPlate(40, 30, 3, 4, 0);
+}
+</script>
 </body>
 </html>
