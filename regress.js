@@ -1,5 +1,5 @@
 // 不干胶拼版计算器 —— 固定回归测试脚本
-// 用法：node regress.js [被测HTML路径，默认 D:/WorkBuddy/不干胶拼版计算器.html]
+// 用法：node regress.js [被测HTML路径，默认 D:/WorkBuddy/不干胶拼版计算器/不干胶拼版计算器.html]
 // 依赖 jsdom（位于受管 node 工作区 node_modules）。脚本只读被测文件，不改写。
 
 const fs = require('fs');
@@ -10,7 +10,7 @@ let JSDOM;
 try { ({ JSDOM } = require('jsdom')); }
 catch (e) { ({ JSDOM } = require(managedModules + '/jsdom')); }
 
-const FILE = process.argv[2] || 'D:/WorkBuddy/不干胶拼版计算器.html';
+const FILE = process.argv[2] || 'D:/WorkBuddy/不干胶拼版计算器/不干胶拼版计算器.html';
 if (!fs.existsSync(FILE)) { console.error('找不到被测文件: ' + FILE); process.exit(2); }
 const html = fs.readFileSync(FILE, 'utf8');
 
@@ -94,8 +94,8 @@ console.log('=== D. 纵向拼版（旧方向）===');
 setVal('#gx', '3'); setVal('#gy', '3');
 doc.getElementById('dirV').click();
 const R2 = ref(3, 3, 'v', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
-eq('纵向 总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + R2.fmt(R2.totalH) + ' × ' + R2.fmt(R2.totalW) + ' mm   跳距：3mm');
-eq('纵向 切料', doc.getElementById('sumCut').textContent, '切料：' + R2.fmt(R2.totalH + 10000n) + ' × ' + R2.fmt(R2.totalW + 3000n) + ' mm'); // 纵向：显示互换 高(总高+10) × 宽(总宽+gx)
+eq('纵向 总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + R2.fmt(R2.totalW) + ' × ' + R2.fmt(R2.totalH) + ' mm   跳距：3mm');
+eq('纵向 切料', doc.getElementById('sumCut').textContent, '切料：' + R2.fmt(R2.totalW + 10000n) + ' × ' + R2.fmt(R2.totalH + 3000n) + ' mm'); // 纵向：与横向同公式 宽(总宽+10) × 高(总高+gy)
 ok('纵向 默认不超幅', doc.getElementById('sumWarn').style.display === 'none');
 // 示意图：纵向为「拼版排列方向旋转」，整版竖版、板1在上板2在下、单板不旋转
 const svgV = doc.getElementById('diagramSvg').innerHTML;
@@ -169,6 +169,39 @@ console.log('=== I. 结果行自动缩小字号（算法守护）===');
   try { win.fitSpanLine(doc.getElementById('sumSizeText'), 24, 12); win.fitMultiLine(doc.getElementById('sumList'), 24, 12); } catch (e) { threw3 = true; }
   ok('fitSpanLine/fitMultiLine 默认不抛错且保持24', !threw3 && parseInt(doc.getElementById('sumSizeText').style.fontSize, 10) === 24 && parseInt(doc.getElementById('sumList').style.fontSize, 10) === 24);
 })();
+
+console.log('=== J. 旋转90°（新功能）===');
+// 重置：2板、横向、默认值
+doc.getElementById('addBtn').click();
+setVal('#gx', '3'); setVal('#gy', '3'); doc.getElementById('dirH').click();
+setVal('.plate:nth-child(1) .pw', '30'); setVal('.plate:nth-child(1) .ph', '40');
+setVal('.plate:nth-child(1) .pcols', '4'); setVal('.plate:nth-child(1) .prows', '5');
+setVal('.plate:nth-child(1) .pdemand', '0');
+setVal('.plate:nth-child(2) .pw', '40'); setVal('.plate:nth-child(2) .ph', '30');
+setVal('.plate:nth-child(2) .pcols', '3'); setVal('.plate:nth-child(2) .prows', '4');
+setVal('.plate:nth-child(2) .pdemand', '0');
+
+// 不勾选时与原来一致
+const RJ0 = ref(3, 3, 'h', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
+eq('旋转off 板1', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + RJ0.fmt(RJ0.pout[0].tw) + ' × ' + RJ0.fmt(RJ0.pout[0].th) + ' mm');
+eq('旋转off 汇总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + RJ0.fmt(RJ0.totalW) + ' × ' + RJ0.fmt(RJ0.totalH) + ' mm   跳距：3mm');
+
+// 板1勾选旋转：30×40→40×30，tw=40*4+3*3=169, th=30*5+3*4=162
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate');
+  cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+const RJ1 = ref(3, 3, 'h', [{ w: 40, h: 30, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
+eq('旋转on 板1拼接', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + RJ1.fmt(RJ1.pout[0].tw) + ' × ' + RJ1.fmt(RJ1.pout[0].th) + ' mm');
+eq('旋转on 板1个数不变', doc.querySelector('.plate:nth-child(1) .pCount').textContent, '共 20 个');
+eq('旋转on 板2不变', doc.querySelector('.plate:nth-child(2) .pResult').textContent, '拼版：' + RJ1.fmt(RJ1.pout[1].tw) + ' × ' + RJ1.fmt(RJ1.pout[1].th) + ' mm');
+eq('旋转on 汇总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + RJ1.fmt(RJ1.totalW) + ' × ' + RJ1.fmt(RJ1.totalH) + ' mm   跳距：3mm');
+eq('旋转on 切料', doc.getElementById('sumCut').textContent, '切料：' + RJ1.fmt(RJ1.totalW + 10000n) + ' × ' + RJ1.fmt(RJ1.totalH + 3000n) + ' mm');
+eq('旋转on sumList板1成品', doc.getElementById('sumList').textContent.split('\n')[0], '拼版1  共 20 个（成品尺寸：40 x 30 mm）');
+ok('旋转on 示意图含旋转后尺寸', doc.getElementById('diagramSvg').innerHTML.indexOf('169×162') >= 0);
+
+// 取消旋转恢复
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate');
+  cb.checked = false; cb.dispatchEvent(new win.Event('input')); }
+eq('旋转off恢复 板1', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + RJ0.fmt(RJ0.pout[0].tw) + ' × ' + RJ0.fmt(RJ0.pout[0].th) + ' mm');
 
 console.log('\n=== 结果 ===');
 console.log('PASS=' + pass + '  FAIL=' + fail);
