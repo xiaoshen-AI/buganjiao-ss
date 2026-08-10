@@ -71,7 +71,7 @@ h3{font-size:16px!important;margin-bottom:8px!important}
 var platesEl = document.getElementById('plates');
 var gxEl = document.getElementById('gx');
 var gyEl = document.getElementById('gy');
-var dir = 'h';
+var dir = 'h';   // 拼版方向：'h' 横向（宽相加、高取最大）/ 'v' 纵向（高相加、宽取最大）；默认横向
 
 function expandScientific(str){
   var m = String(str).trim().match(/^([+-]?)(\d*\.?\d*|\.\d+)([eE]([+-]?\d+))?$/);
@@ -103,7 +103,7 @@ function toThousand(str){
   str = expandScientific(str);
   var s = String(str).trim().replace(/,/g, '');
   if (s === '' || s === '-' || s === '.' || s === '+') return 0n;
-  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;
+  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;   // 含非法字符 → 0，避免 BigInt 崩溃
   var neg = false;
   if (s.charAt(0) === '-') { neg = true; s = s.slice(1); }
   else if (s.charAt(0) === '+') { s = s.slice(1); }
@@ -129,14 +129,14 @@ function fmtThousand(v){
 
 function toCount(str){
   str = expandScientific(str);
-  var s = String(str).trim().replace(/,/g, '');
+  var s = String(str).trim().replace(/,/g, '');   // 允许千分位逗号
   if (s === '' || s === '.') return 0n;
-  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;
+  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return 0n;   // 含字母/中文/多小数点等非法字符 → 0，不崩溃
   var neg = (s.charAt(0) === '-');
   var body = (s.charAt(0) === '-' || s.charAt(0) === '+') ? s.slice(1) : s;
   var intPart = body.split('.')[0].replace(/^0+(?=\d)/, '') || '0';
   var v = BigInt(intPart);
-  return neg ? 0n : v;
+  return neg ? 0n : v;   // 需求数量非负：负数视为 0
 }
 
 function plateHTML(idx, w, h, cols, rows, demand){
@@ -206,7 +206,7 @@ function recalc(){
       th = BigInt(rows) * h + BigInt(rows - 1) * gy;
       n = cols * rows;
       if (demand > 0n) {
-        print = (demand + BigInt(n) - 1n) / BigInt(n);
+        print = (demand + BigInt(n) - 1n) / BigInt(n);   // 向上取整
         if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; }
       }
       if (dir === 'h') {
@@ -238,6 +238,7 @@ function recalc(){
   }
   document.getElementById('sumPrint').textContent = printText;
   var warnEl = document.getElementById('sumWarn');
+  // 超幅阈值随纸张方向互换：横向纸不转 300×352；纵向纸转90°后整版宽高互换，显示尺寸(总高×总宽)对应纸张 352×300，故判定 总宽≤300、总高≤352
   var overW, overH, overText;
   if (dir === 'h') {
     overW = 300000n; overH = 352000n;
@@ -252,6 +253,7 @@ function recalc(){
   } else {
     warnEl.style.display = 'none';
   }
+  // 结果卡片各行：一行放不下时自动缩小字号（下限 12px），保证单行不折行
   fitSpanLine(document.getElementById('sumSizeText'), 24, 12);
   fitBlockLine(document.getElementById('sumCut'), 24, 12);
   fitMultiLine(document.getElementById('sumList'), 24, 12);
@@ -260,6 +262,7 @@ function recalc(){
   drawDiagram();
 }
 
+// 自动缩小字号：结果卡片某行比容器宽、会折行时，缩到能单行显示（下限 minPx 像素）
 var _fitProbe = null;
 function fitProbe() {
   if (!_fitProbe) {
@@ -269,6 +272,7 @@ function fitProbe() {
   }
   return _fitProbe;
 }
+// 块级单行元素（切料行、模数印数行）：用自身 scrollWidth/clientWidth 判断，配合 nowrap
 function fitBlockLine(el, base, minPx) {
   el.style.fontSize = base + 'px';
   var cur = base;
@@ -277,6 +281,7 @@ function fitBlockLine(el, base, minPx) {
     el.style.fontSize = cur + 'px';
   }
 }
+// 行内元素（flex 行里的拼版尺寸 span，旁边有复制按钮）：用探针测量，可用宽扣除兄弟元素
 function fitSpanLine(el, base, minPx) {
   var parent = el.parentNode;
   var avail = parent.clientWidth;
@@ -298,6 +303,7 @@ function fitSpanLine(el, base, minPx) {
   el.style.fontSize = cur + 'px';
   el.style.whiteSpace = 'nowrap';
 }
+// 多行块（清单 sumList，pre-line 保留换行）：取最宽行测量，缩到最宽行能单行放下
 function fitMultiLine(el, base, minPx) {
   var parent = el.parentNode;
   var pcs = getComputedStyle(parent);
@@ -341,6 +347,7 @@ function drawDiagram(){
       var th = Number(BigInt(rows) * h + BigInt(rows - 1) * gy);
       raw.push({ tw: tw, th: th, n: cols * rows, cols: cols, rows: rows, idx: i + 1, w: Number(w), h: Number(h) });
     });
+    // 第一遍：先算出整版总尺寸（TW/TH，mm），并记录每块板在「原始朝向」下的 mm 矩形（含间隙后的起点）
     var TW = 0, TH = 0, first = true;
     var layout = [];
     raw.forEach(function(b){
@@ -360,42 +367,53 @@ function drawDiagram(){
       first = false;
     });
     var colors = ['#3b82f6','#16a34a','#9333ea','#ea580c','#0891b2','#db2777'];
-    var AREAW = 320, AREAH = 408, padX = 18, padTop = 10, padBottom = 22;
-    var USE_PATTERN = 30;
+    var AREAW = 320, AREAH = 408, padX = 18, padTop = 12, padBottom = 28;
+    var USE_PATTERN = 30; // 单板格数 >30 时用 <pattern> 批量渲染
     var svg = '';
     if (TW > 0 && TH > 0) {
+      // 整版按纸张自然朝向绘制：横向=左右并排(底部对齐)，纵向=上下堆叠(板1在上、板2在下)
+      // 仅「拼版排列方向」旋转，纸张与单板本身不旋转（不把整图翻成横版）
       var drawTW = TW, drawTH = TH;
       var drawW = AREAW - 2 * padX, drawH = AREAH - padTop - padBottom;
       var scale = Math.min(drawW / drawTW, drawH / drawTH);
       var bx = padX, by = padTop, bw = drawTW * scale, bh = drawTH * scale;
-      var defs = '';
+      // 预计算每块拼板的绘制坐标，供 defs 和主循环共用
+      var drawList = [];
       raw.forEach(function(b, i){
+        var L = layout[i];
+        var rx = L.x;
+        var ry = (dir === 'h') ? (TH - L.h) : L.y;
+        var col = colors[i % colors.length];
+        var px = bx + rx * scale, py = by + ry * scale, pw = b.tw * scale, ph = b.th * scale;
+        var cellw = b.w * scale, cellh = b.h * scale;
+        var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
         var n = b.cols * b.rows;
-        if (n > USE_PATTERN) {
-          var cellw = b.w * scale, cellh = b.h * scale;
-          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
-          defs += '<pattern id="g' + i + '" width="' + (cellw + gapw) + '" height="' + (cellh + gaph) + '" patternUnits="userSpaceOnUse">';
-          defs += '<rect x="0" y="0" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+        // tile 尺寸 = 总宽/列数、总高/行数，确保 cols×rows 个 tile 正好铺满 pw×ph
+        var tileW = n > USE_PATTERN ? pw / b.cols : cellw + gapw;
+        var tileH = n > USE_PATTERN ? ph / b.rows : cellh + gaph;
+        drawList.push({ b: b, i: i, col: col, px: px, py: py, pw: pw, ph: ph, cellw: cellw, cellh: cellh, gapw: gapw, gaph: gaph, n: n, tileW: tileW, tileH: tileH, legendDim: fmtThousand(BigInt(Math.round(b.tw))) + '×' + fmtThousand(BigInt(Math.round(b.th))) });
+      });
+      // 预建 defs：高格数拼板用 <pattern> 批量渲染，原点对齐到填充矩形左上角
+      var defs = '';
+      drawList.forEach(function(d){
+        if (d.n > USE_PATTERN) {
+          defs += '<pattern id="g' + d.i + '" x="' + d.px + '" y="' + d.py + '" width="' + d.tileW + '" height="' + d.tileH + '" patternUnits="userSpaceOnUse">';
+          defs += '<rect x="0" y="0" width="' + d.cellw + '" height="' + d.cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
           defs += '</pattern>';
         }
       });
       svg += '<svg viewBox="0 0 ' + AREAW + ' ' + AREAH + '" width="100%" style="display:block;">';
       if (defs) svg += '<defs>' + defs + '</defs>';
       svg += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>';
-      raw.forEach(function(b, i){
-        var L = layout[i];
-        var rx = L.x;
-        var ry = (dir === 'h') ? (TH - L.h) : L.y;
-        var rw = b.tw, rh = b.th;
-        var col = colors[i % colors.length];
-        var px = bx + rx * scale, py = by + ry * scale, pw = rw * scale, ph = rh * scale;
+      drawList.forEach(function(d){
+        var b = d.b, i = d.i, col = d.col;
+        var px = d.px, py = d.py, pw = d.pw, ph = d.ph;
+        var cellw = d.cellw, cellh = d.cellh, gapw = d.gapw, gaph = d.gaph;
         svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="' + col + '14" stroke="#dc2626" stroke-width="0.8"/>';
-        var n = b.cols * b.rows;
-        if (n > USE_PATTERN) {
+        // 网格：高格数(>30)用 <pattern> 批量渲染，低格数逐个 <rect>
+        if (d.n > USE_PATTERN) {
           svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="url(#g' + i + ')"/>';
         } else {
-          var cellw = b.w * scale, cellh = b.h * scale;
-          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
           for (var r = 0; r < b.rows; r++) {
             for (var c = 0; c < b.cols; c++) {
               var cellx = px + c * (cellw + gapw);
@@ -405,9 +423,8 @@ function drawDiagram(){
           }
         }
         var halo = 'paint-order="stroke" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"';
-        var legendDim = fmtThousand(BigInt(Math.round(b.tw))) + '×' + fmtThousand(BigInt(Math.round(b.th)));
         svg += '<text x="' + (px + 3) + '" y="' + (py + 11) + '" font-size="9" fill="' + col + '" ' + halo + '>拼板' + b.idx + '</text>';
-        svg += '<text x="' + (px + 3) + '" y="' + (py + 21) + '" font-size="9" fill="' + col + '" ' + halo + '>' + legendDim + ' · ' + b.n + '个</text>';
+        svg += '<text x="' + (px + 3) + '" y="' + (py + 21) + '" font-size="9" fill="' + col + '" ' + halo + '>' + d.legendDim + ' · ' + b.n + '个</text>';
       });
       svg += '<text x="' + (bx + bw / 2) + '" y="' + (by + bh + 18) + '" text-anchor="middle" font-size="12" fill="#475569" font-weight="600">整版 ' + fmtThousand(BigInt(Math.round(drawTW))) + ' × ' + fmtThousand(BigInt(Math.round(drawTH))) + ' mm</text>';
       svg += '</svg>';
@@ -468,6 +485,7 @@ function printDiagram(){
       if (typeof alert === 'function') alert('暂无可导出的有效拼板，请先填写成品尺寸与行列数。');
       return;
     }
+    // 整版总尺寸（千分之一毫米 → mm）
     var TW = 0, TH = 0, first = true;
     raw.forEach(function(b){
       if (dir === 'h') {
@@ -480,13 +498,14 @@ function printDiagram(){
       first = false;
     });
     var TWmm = TW / 1000, THmm = TH / 1000;
+    // 纯刀模线：只画每个成品矩形闭合线（红 0.2mm），不画外框、不填色、不写文字
     var cx = 0, cy = 0;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + TWmm + 'mm" height="' + THmm + 'mm" viewBox="0 0 ' + TWmm + ' ' + THmm + '" style="display:block;">';
     raw.forEach(function(b){
       var pw = b.tw / 1000, ph = b.th / 1000;
       var px, py;
-      if (dir === 'h') { py = (TH - b.th) / 1000; px = cx; cx += pw + Number(gx) / 1000; }
-      else            { px = 0;                 py = cy; cy += ph + Number(gy) / 1000; }
+      if (dir === 'h') { py = (TH - b.th) / 1000; px = cx; cx += pw + Number(gx) / 1000; }  // 横向：底部对齐
+      else            { px = 0;                 py = cy; cy += ph + Number(gy) / 1000; }      // 纵向：左对齐
       var cellw = b.w / 1000, cellh = b.h / 1000;
       var gapw = Number(gx) / 1000, gaph = Number(gy) / 1000;
       for (var r = 0; r < b.rows; r++) {
