@@ -9,18 +9,20 @@
 
 **类型**：bug 修复
 
-**改动内容**：整版示意图 pattern 原点对齐修复
-- `<pattern>` 原点从默认 (0,0) 改为填充矩形左上角 (`x=px, y=py`)
-- tile 尺寸从 `cellw+gapw` 改为 `pw/cols`、`ph/rows`，确保格子正好铺满
-- 预计算 `drawList` 结构，避免 defs 和主循环各自算一遍，数值不一致
+**改动内容**：整版示意图修复
+1. **pattern 原点对齐**：`<pattern>` 原点从默认 (0,0) 改为填充矩形左上角 (`x=px, y=py`)，tile 尺寸从 `cellw+gapw` 改为 `pw/cols`、`ph/rows`
+2. **底部对齐**：整版底部对齐绘图区底边（`by = padTop + drawH - bh`）
+3. **水平居中**：整版左右自动居中（`bx = padX + (drawW - bw) / 2`）
+4. **底部文字外移**：`"整版 TW × TH mm"` 从 SVG 内部 `<text>` 移出为外部 HTML `<div>`，不受 viewBox 裁切
+5. **padBottom 28→10**
 
-**为什么修**：高格数拼版（>30格）用 pattern 批量渲染网格时，tile 原点错位 + 尺寸不精确，导致边缘格子被裁切
+**为什么修**：1 解决高格数拼版边缘格子裁切；2-4 解决整版底部留白不均及文字裁切
 
-**影响代码段**：`drawDiagram()` 函数，约 40 行重构（预计算 → defs 对齐 → 主循环统一引用）
+**影响代码段**：`drawDiagram()` 函数
 
 **回归**：58/58 全过
 
-**commit**：`db71368`
+**commit**：`bd29641`
 
 ---
 
