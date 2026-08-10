@@ -23,7 +23,7 @@ h3{font-size:16px!important;margin-bottom:8px!important}
 <div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
   <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
     <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
-  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.0</span></h3>
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.1</span></h3>
 
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
@@ -74,7 +74,7 @@ var gyEl = document.getElementById('gy');
 var dir = 'h';   // 拼版方向：'h' 横向（宽相加、高取最大）/ 'v' 纵向（高相加、宽取最大）；默认横向
 
 function expandScientific(str){
-  var m = String(str).trim().match(/^([+-]?)(\d*\.?\d*|\.\d+)([eE]([+-]?\d+))?$/);
+  var m = String(str).trim().match(/^([+-]?)(\d*\.?\d*|\.\d+)([eE]([+-]?\d))?$/);
   if (!m || m[2] === '' || m[2] === '.') return str;
   var sign  = m[1];
   var mant  = m[2] || '0';
@@ -367,7 +367,7 @@ function drawDiagram(){
       first = false;
     });
     var colors = ['#3b82f6','#16a34a','#9333ea','#ea580c','#0891b2','#db2777'];
-    var AREAW = 320, AREAH = 408, padX = 18, padTop = 10, padBottom = 22;
+    var AREAW = 320, AREAH = 408, padX = 18, padTop = 12, padBottom = 10;
     var USE_PATTERN = 30; // 单板格数 >30 时用 <pattern> 批量渲染
     var svg = '';
     if (TW > 0 && TH > 0) {
@@ -376,37 +376,45 @@ function drawDiagram(){
       var drawTW = TW, drawTH = TH;
       var drawW = AREAW - 2 * padX, drawH = AREAH - padTop - padBottom;
       var scale = Math.min(drawW / drawTW, drawH / drawTH);
-      var bx = padX, by = padTop, bw = drawTW * scale, bh = drawTH * scale;
-      // 预建 defs：高格数拼板用 <pattern> 批量渲染网格（替代逐个 <rect>）
-      var defs = '';
+      var bw = drawTW * scale, bh = drawTH * scale;
+      var bx = padX + (drawW - bw) / 2, by = padTop + (drawH - bh);
+      // 预计算每块拼板的绘制坐标，供 defs 和主循环共用
+      var drawList = [];
       raw.forEach(function(b, i){
+        var L = layout[i];
+        var rx = L.x;
+        var ry = (dir === 'h') ? (TH - L.h) : L.y;
+        var col = colors[i % colors.length];
+        var px = bx + rx * scale, py = by + ry * scale, pw = b.tw * scale, ph = b.th * scale;
+        var cellw = b.w * scale, cellh = b.h * scale;
+        var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
         var n = b.cols * b.rows;
-        if (n > USE_PATTERN) {
-          var cellw = b.w * scale, cellh = b.h * scale;
-          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
-          defs += '<pattern id="g' + i + '" width="' + (cellw + gapw) + '" height="' + (cellh + gaph) + '" patternUnits="userSpaceOnUse">';
-          defs += '<rect x="0" y="0" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+        // tile 尺寸 = 总宽/列数、总高/行数，确保 cols×rows 个 tile 正好铺满 pw×ph
+        var tileW = n > USE_PATTERN ? pw / b.cols : cellw + gapw;
+        var tileH = n > USE_PATTERN ? ph / b.rows : cellh + gaph;
+        drawList.push({ b: b, i: i, col: col, px: px, py: py, pw: pw, ph: ph, cellw: cellw, cellh: cellh, gapw: gapw, gaph: gaph, n: n, tileW: tileW, tileH: tileH, legendDim: fmtThousand(BigInt(Math.round(b.tw))) + '×' + fmtThousand(BigInt(Math.round(b.th))) });
+      });
+      // 预建 defs：高格数拼板用 <pattern> 批量渲染，原点对齐到填充矩形左上角
+      var defs = '';
+      drawList.forEach(function(d){
+        if (d.n > USE_PATTERN) {
+          defs += '<pattern id="g' + d.i + '" x="' + d.px + '" y="' + d.py + '" width="' + d.tileW + '" height="' + d.tileH + '" patternUnits="userSpaceOnUse">';
+          defs += '<rect x="0" y="0" width="' + d.cellw + '" height="' + d.cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
           defs += '</pattern>';
         }
       });
       svg += '<svg viewBox="0 0 ' + AREAW + ' ' + AREAH + '" width="100%" style="display:block;">';
       if (defs) svg += '<defs>' + defs + '</defs>';
       svg += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>';
-      raw.forEach(function(b, i){
-        var L = layout[i];
-        var rx = L.x;
-        var ry = (dir === 'h') ? (TH - L.h) : L.y;   // 横向底部对齐；纵向自然堆叠(板1在上、板2在下)
-        var rw = b.tw, rh = b.th;
-        var col = colors[i % colors.length];
-        var px = bx + rx * scale, py = by + ry * scale, pw = rw * scale, ph = rh * scale;
+      drawList.forEach(function(d){
+        var b = d.b, i = d.i, col = d.col;
+        var px = d.px, py = d.py, pw = d.pw, ph = d.ph;
+        var cellw = d.cellw, cellh = d.cellh, gapw = d.gapw, gaph = d.gaph;
         svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="' + col + '14" stroke="#dc2626" stroke-width="0.8"/>';
         // 网格：高格数(>30)用 <pattern> 批量渲染，低格数逐个 <rect>
-        var n = b.cols * b.rows;
-        if (n > USE_PATTERN) {
+        if (d.n > USE_PATTERN) {
           svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="url(#g' + i + ')"/>';
         } else {
-          var cellw = b.w * scale, cellh = b.h * scale;
-          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
           for (var r = 0; r < b.rows; r++) {
             for (var c = 0; c < b.cols; c++) {
               var cellx = px + c * (cellw + gapw);
@@ -416,12 +424,10 @@ function drawDiagram(){
           }
         }
         var halo = 'paint-order="stroke" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"';
-        var legendDim = fmtThousand(BigInt(Math.round(b.tw))) + '×' + fmtThousand(BigInt(Math.round(b.th)));
         svg += '<text x="' + (px + 3) + '" y="' + (py + 11) + '" font-size="9" fill="' + col + '" ' + halo + '>拼板' + b.idx + '</text>';
-        svg += '<text x="' + (px + 3) + '" y="' + (py + 21) + '" font-size="9" fill="' + col + '" ' + halo + '>' + legendDim + ' · ' + b.n + '个</text>';
+        svg += '<text x="' + (px + 3) + '" y="' + (py + 21) + '" font-size="9" fill="' + col + '" ' + halo + '>' + d.legendDim + ' · ' + b.n + '个</text>';
       });
-      svg += '<text x="' + (bx + bw / 2) + '" y="' + (by + bh + 18) + '" text-anchor="middle" font-size="12" fill="#475569" font-weight="600">整版 ' + fmtThousand(BigInt(Math.round(drawTW))) + ' × ' + fmtThousand(BigInt(Math.round(drawTH))) + ' mm</text>';
-      svg += '</svg>';
+      svg += '</svg><div style="text-align:center;font-size:12px;color:#475569;font-weight:600;margin-top:4px;">整版 ' + fmtThousand(BigInt(Math.round(drawTW))) + ' × ' + fmtThousand(BigInt(Math.round(drawTH))) + ' mm</div>';
     } else {
       svg = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:13px;">暂无可绘制的有效拼板</div>';
     }
