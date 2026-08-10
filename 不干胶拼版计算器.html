@@ -1,7 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>不干胶拼版计算器</title>
+<style>
+@media(max-width:768px){
+#calcLayout{flex-direction:column!important}
+#calcLeft,#calcRight{flex:1 1 100%!important;min-width:0!important}
+#calcRight{margin-top:16px}
+input[type="text"],input[type="number"]{font-size:16px!important;min-height:38px}
+button{min-height:38px;font-size:14px!important}
+#sumSizeText,#sumCut,#sumList,#sumPrint{font-size:18px!important}
+h3{font-size:16px!important;margin-bottom:8px!important}
+#diagramSvg{padding:4px!important}
+.plate{padding:10px 12px!important}
+}
+</style>
+</head>
+<body style="margin:0;padding:12px;background:#fff;">
 <div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
-  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
-    <div style="flex:1 1 380px;min-width:300px;">
-  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸）</h3>
+  <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
+    <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.0</span></h3>
 
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
@@ -35,7 +56,7 @@
     <div style="font-size:15px;font-weight:700;color:#ea580c;margin-top:10px;white-space:nowrap;letter-spacing:0.5px;">检查：数量、尺寸、印色、模数、印数、尺寸切料</div>
   </div>
   </div>
-  <div style="flex:1 1 300px;min-width:260px;">
+  <div id="calcRight" style="flex:1 1 300px;min-width:260px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;">
       <h3 style="margin:0;font-size:18px;">整版示意图</h3>
       <button id="printPdfBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:4px 12px;cursor:pointer;">导出刀模PDF(1:1)</button>
@@ -344,7 +365,8 @@ function drawDiagram(){
       first = false;
     });
     var colors = ['#3b82f6','#16a34a','#9333ea','#ea580c','#0891b2','#db2777'];
-    var AREAW = 320, AREAH = 408, padX = 44, padTop = 14, padBottom = 30;
+    var AREAW = 320, AREAH = 408, padX = 18, padTop = 10, padBottom = 22;
+    var USE_PATTERN = 30; // 单板格数 >30 时用 <pattern> 批量渲染
     var svg = '';
     if (TW > 0 && TH > 0) {
       // 整版按纸张自然朝向绘制：横向=左右并排(底部对齐)，纵向=上下堆叠(板1在上、板2在下)
@@ -353,7 +375,20 @@ function drawDiagram(){
       var drawW = AREAW - 2 * padX, drawH = AREAH - padTop - padBottom;
       var scale = Math.min(drawW / drawTW, drawH / drawTH);
       var bx = padX, by = padTop, bw = drawTW * scale, bh = drawTH * scale;
+      // 预建 defs：高格数拼板用 <pattern> 批量渲染网格（替代逐个 <rect>）
+      var defs = '';
+      raw.forEach(function(b, i){
+        var n = b.cols * b.rows;
+        if (n > USE_PATTERN) {
+          var cellw = b.w * scale, cellh = b.h * scale;
+          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
+          defs += '<pattern id="g' + i + '" width="' + (cellw + gapw) + '" height="' + (cellh + gaph) + '" patternUnits="userSpaceOnUse">';
+          defs += '<rect x="0" y="0" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+          defs += '</pattern>';
+        }
+      });
       svg += '<svg viewBox="0 0 ' + AREAW + ' ' + AREAH + '" width="100%" style="display:block;">';
+      if (defs) svg += '<defs>' + defs + '</defs>';
       svg += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>';
       raw.forEach(function(b, i){
         var L = layout[i];
@@ -363,14 +398,19 @@ function drawDiagram(){
         var col = colors[i % colors.length];
         var px = bx + rx * scale, py = by + ry * scale, pw = rw * scale, ph = rh * scale;
         svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="' + col + '14" stroke="#dc2626" stroke-width="0.8"/>';
-        // 完整网格：每个成品小格带红框；单板不旋转，格子保持 w×h 同向
-        var cellw = b.w * scale, cellh = b.h * scale;
-        var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
-        for (var r = 0; r < b.rows; r++) {
-          for (var c = 0; c < b.cols; c++) {
-            var cellx = px + c * (cellw + gapw);
-            var celly = py + r * (cellh + gaph);
-            svg += '<rect x="' + cellx + '" y="' + celly + '" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+        // 网格：高格数(>30)用 <pattern> 批量渲染，低格数逐个 <rect>
+        var n = b.cols * b.rows;
+        if (n > USE_PATTERN) {
+          svg += '<rect x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" fill="url(#g' + i + ')"/>';
+        } else {
+          var cellw = b.w * scale, cellh = b.h * scale;
+          var gapw = Number(gx) * scale, gaph = Number(gy) * scale;
+          for (var r = 0; r < b.rows; r++) {
+            for (var c = 0; c < b.cols; c++) {
+              var cellx = px + c * (cellw + gapw);
+              var celly = py + r * (cellh + gaph);
+              svg += '<rect x="' + cellx + '" y="' + celly + '" width="' + cellw + '" height="' + cellh + '" fill="none" stroke="#dc2626" stroke-width="0.8"/>';
+            }
           }
         }
         var halo = 'paint-order="stroke" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"';
@@ -512,3 +552,5 @@ if (!platesEl.children.length) {
   addPlate(40, 30, 3, 4, 0);
 }
 </script>
+</body>
+</html>
