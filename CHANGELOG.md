@@ -5,24 +5,60 @@
 
 ---
 
-## v1.1 (2026-08-10)
+## v1.3 (2026-08-12)
 
 **类型**：bug 修复
 
-**改动内容**：整版示意图修复
-1. **pattern 原点对齐**：`<pattern>` 原点从默认 (0,0) 改为填充矩形左上角 (`x=px, y=py`)，tile 尺寸从 `cellw+gapw` 改为 `pw/cols`、`ph/rows`
-2. **底部对齐**：整版底部对齐绘图区底边（`by = padTop + drawH - bh`）
-3. **水平居中**：整版左右自动居中（`bx = padX + (drawW - bw) / 2`）
-4. **底部文字外移**：`"整版 TW × TH mm"` 从 SVG 内部 `<text>` 移出为外部 HTML `<div>`，不受 viewBox 裁切
-5. **padBottom 28→10**
+**改动内容**：整版示意图 pattern 网格底部对齐修复
+1. **tile 尺寸回退为精确值**：`tileW/tileH` 从 `pw/cols`、`ph/rows`（浮点除法，高格数累积偏差导致拼版底部比拼版1短一截）改回 `cellw+gapw`、`cellh+gaph`
+2. 每个 pattern tile 含 1 cell + 1 gap，末 tile 多余 gap 被 `pw/ph` 裁掉，cells 完美填满，各拼版底部对齐
 
-**为什么修**：1 解决高格数拼版边缘格子裁切；2-4 解决整版底部留白不均及文字裁切
+**为什么修**：拼版2（col×rows>30 走 `<pattern>` 批量渲染）cells 底部比拼版1短，整版示意图两块底部不齐
 
-**影响代码段**：`drawDiagram()` 函数
+**影响代码段**：`drawDiagram()` 函数，`drawList` 预计算段 `tileW/tileH` 赋值
+
+**回归**：58/58 全过
+
+**commit**：`<pending>`
+
+---
+
+## v1.2 (2026-08-10)
+
+**类型**：bug 修复
+
+**改动内容**：整版示意图布局修复
+1. **底部对齐**：`by` 从 `padTop` 改为 `padTop + drawH - bh`，整版贴绘图区底边
+2. **水平居中**：`bx` 从固定 `padX` 改为 `padX + (drawW - bw) / 2`
+3. **底部文字外移**：标注 `"整版 TW × TH mm"` 从 SVG 内部 `<text>` 移出为外部 HTML `<div>`，不受 viewBox 裁切
+4. **padBottom 28→10**
+
+**为什么修**：整版底部留白不均 + 文字被 viewBox 裁切
+
+**影响代码段**：`drawDiagram()` 函数，bx/by 计算逻辑 + 底部标注从 SVG 内移到 SVG 外
 
 **回归**：58/58 全过
 
 **commit**：`bd29641`
+
+---
+
+## v1.1 (2026-08-10)
+
+**类型**：bug 修复
+
+**改动内容**：整版示意图 pattern 原点对齐修复
+- `<pattern>` 原点从默认 (0,0) 改为填充矩形左上角 (`x=px, y=py`)
+- tile 尺寸从 `cellw+gapw` 改为 `pw/cols`、`ph/rows`，确保格子正好铺满
+- 预计算 `drawList` 结构，避免 defs 和主循环各自算一遍，数值不一致
+
+**为什么修**：高格数拼版（>30格）用 pattern 批量渲染网格时，tile 原点错位 + 尺寸不精确，导致边缘格子被裁切
+
+**影响代码段**：`drawDiagram()` 函数，约 40 行重构（预计算 → defs 对齐 → 主循环统一引用）
+
+**回归**：58/58 全过
+
+**commit**：`db71368`
 
 ---
 
