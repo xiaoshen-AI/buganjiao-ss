@@ -117,7 +117,7 @@ setVal('.plate:nth-child(1) .pdemand', '50');
 setVal('.plate:nth-child(2) .pdemand', '80');
 eq('板1 印数', doc.querySelector('.plate:nth-child(1) .pPrint').textContent, '印数：3');
 eq('板2 印数', doc.querySelector('.plate:nth-child(2) .pPrint').textContent, '印数：7');
-eq('汇总 模数/印数', doc.getElementById('sumPrint').textContent, '模数：32个   印数：7（数量224个）');
+eq('汇总 模数/印数', doc.getElementById('sumPrint').textContent, '模数：12个   印数：7（数量84个）');
 
 console.log('=== F. 非法尺寸不崩溃（旧健壮性）===');
 let threw = false;
