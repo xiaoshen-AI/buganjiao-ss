@@ -23,7 +23,7 @@ h3{font-size:16px!important;margin-bottom:8px!important}
 <div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
   <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
     <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
-  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.4</span></h3>
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.3</span></h3>
 
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
@@ -189,7 +189,7 @@ function recalc(){
   var gx = toThousand(gxEl.value);
   var gy = toThousand(gyEl.value);
   var plates = platesEl.querySelectorAll('.plate');
-  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0, totalModulus = 0n;
+  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0;
   plates.forEach(function(p, i){
     p.querySelector('.ptitle').textContent = '拼板' + (i + 1);
     var w = toThousand(p.querySelector('.pw').value);
@@ -205,7 +205,6 @@ function recalc(){
       tw = BigInt(cols) * w + BigInt(cols - 1) * gx;
       th = BigInt(rows) * h + BigInt(rows - 1) * gy;
       n = cols * rows;
-      totalModulus += BigInt(n);
       if (demand > 0n) {
         print = (demand + BigInt(n) - 1n) / BigInt(n);   // 向上取整
         if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; }
@@ -233,7 +232,7 @@ function recalc(){
   document.getElementById('sumList').textContent = list.join('\n');
   var printText;
   if (maxPrintIdx > 0 && maxPrint > 0n) {
-    printText = '模数：' + String(totalModulus) + '个   印数：' + String(maxPrint) + '（数量' + String(totalModulus * maxPrint) + '个）';
+    printText = '模数：' + String(maxPrintN) + '个   印数：' + String(maxPrint) + '（数量' + String(BigInt(maxPrintN) * maxPrint) + '个）';
   } else {
     printText = '模数：0个   印数：0';
   }
