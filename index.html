@@ -23,7 +23,7 @@ h3{font-size:16px!important;margin-bottom:8px!important}
 <div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
   <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
     <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
-  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.3</span></h3>
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.6</span></h3>
 
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
@@ -53,6 +53,7 @@ h3{font-size:16px!important;margin-bottom:8px!important}
     <div id="sumList" style="font-size:24px;font-weight:700;line-height:1.6;white-space:pre-line;margin-top:4px;">拼版1  20 个
 拼版2  12 个</div>
     <div id="sumPrint" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:nowrap;">模数：0个   印数：0</div>
+    <div id="sumPrintAll" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:nowrap;display:none;">整版模数：0个   印数：0</div>
     <div id="sumWarn" style="font-size:13px;font-weight:600;color:#dc2626;margin-top:6px;display:none;">⚠ 超出纸张最大 300×352</div>
     <div id="sumCheck" style="font-size:24px;font-weight:700;color:#ea580c;margin-top:10px;white-space:nowrap;letter-spacing:0.5px;">检查：数量、尺寸、印色、模数、印数、尺寸切料</div>
   </div>
@@ -189,7 +190,7 @@ function recalc(){
   var gx = toThousand(gxEl.value);
   var gy = toThousand(gyEl.value);
   var plates = platesEl.querySelectorAll('.plate');
-  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0;
+  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0, totalModulus = 0n;
   plates.forEach(function(p, i){
     p.querySelector('.ptitle').textContent = '拼板' + (i + 1);
     var w = toThousand(p.querySelector('.pw').value);
@@ -205,6 +206,7 @@ function recalc(){
       tw = BigInt(cols) * w + BigInt(cols - 1) * gx;
       th = BigInt(rows) * h + BigInt(rows - 1) * gy;
       n = cols * rows;
+      totalModulus += BigInt(n);
       if (demand > 0n) {
         print = (demand + BigInt(n) - 1n) / BigInt(n);   // 向上取整
         if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; }
@@ -221,7 +223,7 @@ function recalc(){
     p.querySelector('.pResult').textContent = '拼版：' + fmtThousand(tw) + ' × ' + fmtThousand(th) + ' mm';
     p.querySelector('.pCount').textContent = '共 ' + n + ' 个';
     p.querySelector('.pPrint').textContent = '印数：' + ((valid && demand > 0n) ? String(print) : '—');
-    list.push('拼版' + (i + 1) + '  共 ' + n + ' 个（成品尺寸：' + fmtThousand(w) + ' x ' + fmtThousand(h) + ' mm）');
+    list.push('拼版' + (i + 1) + '  共 ' + n + ' 个  数量' + String(demand) + '个（尺寸：' + fmtThousand(w) + ' x ' + fmtThousand(h) + ' mm）');
   });
   var dispW = totalW;
   var dispH = totalH;
@@ -230,24 +232,27 @@ function recalc(){
   var cutH = totalH + gy;
   document.getElementById('sumCut').textContent = '切料：' + fmtThousand(cutW) + ' × ' + fmtThousand(cutH) + ' mm';
   document.getElementById('sumList').textContent = list.join('\n');
-  var printText;
+  var printText, printAllText;
   if (maxPrintIdx > 0 && maxPrint > 0n) {
     printText = '模数：' + String(maxPrintN) + '个   印数：' + String(maxPrint) + '（数量' + String(BigInt(maxPrintN) * maxPrint) + '个）';
+    printAllText = '整版模数：' + String(totalModulus) + '个   印数：' + String(maxPrint) + '（数量' + String(totalModulus * maxPrint) + '个）';
   } else {
     printText = '模数：0个   印数：0';
+    printAllText = '整版模数：0个   印数：0';
   }
   document.getElementById('sumPrint').textContent = printText;
+  document.getElementById('sumPrintAll').textContent = printAllText;
   var warnEl = document.getElementById('sumWarn');
   // 超幅阈值随纸张方向互换：横向纸不转 300×352；纵向纸转90°后整版宽高互换，显示尺寸(总高×总宽)对应纸张 352×300，故判定 总宽≤300、总高≤352
   var overW, overH, overText;
   if (dir === 'h') {
     overW = 300000n; overH = 352000n;
-    overText = '⚠ 拼合尺寸超出纸张最大 300×352，请确认是否分版或换材料';
+    overText = '⚠ 切料尺寸超出纸张最大 300×352，请确认是否分版或换材料';
   } else {
     overW = 300000n; overH = 352000n;
-    overText = '⚠ 拼合尺寸超出纸张最大 352×300，请确认是否分版或换材料';
+    overText = '⚠ 切料尺寸超出纸张最大 352×300，请确认是否分版或换材料';
   }
-  if (totalW > overW || totalH > overH) {
+  if (cutW > overW || cutH > overH) {
     warnEl.style.display = 'block';
     warnEl.textContent = overText;
   } else {
@@ -258,6 +263,7 @@ function recalc(){
   fitBlockLine(document.getElementById('sumCut'), 24, 12);
   fitMultiLine(document.getElementById('sumList'), 24, 12);
   fitBlockLine(document.getElementById('sumPrint'), 24, 12);
+  fitBlockLine(document.getElementById('sumPrintAll'), 24, 12);
   fitBlockLine(document.getElementById('sumCheck'), 24, 10);
   drawDiagram();
 }
