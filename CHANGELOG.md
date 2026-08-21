@@ -21,7 +21,7 @@
 
 **回归**：全过（以 regress.js 实际断言数为准，本次 PASS=135 FAIL=0）
 
-**commit**：`<pending>`
+**commit**：`c8635ce22fb28168ae2f70528bc397a5c40d6170`
 
 ---
 
