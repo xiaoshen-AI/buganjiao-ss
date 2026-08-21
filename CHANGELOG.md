@@ -5,6 +5,26 @@
 
 ---
 
+## v1.7 (2026-08-21)
+
+**类型**：功能
+
+**改动内容**：
+1. 每个拼版（`.plate`）加「复制」按钮，一键复制当前板所有数据（成品宽/高、列/行数、需求数量、旋转状态）到新板，插入到当前板之后
+   - `plateHTML` 加 `rotate` 参数与「复制」按钮；`addPlate` 加 `rotate`/`beforeNode` 参数，用 `insertAdjacentHTML('afterend')` 插到当前板后
+   - 绑定 `copyBtn` click：读当前板字段 → `addPlate(..., p)` 插当前板后；继承旋转状态、标题自动重排
+2. 现有「+ 添加拼版」与初始板调用不受影响（`rotate`/`beforeNode` 默认 undefined/false）
+
+**为什么加**：操作员常需基于一块板微调出相似板（换尺寸/数量），手动重填效率低；一键复制省事
+
+**影响代码段**：`plateHTML` 模板、`addPlate` 函数、`recalc()`、`regress.js`（N 段「复制按钮」9 条）
+
+**回归**：全过（以 regress.js 实际断言数为准，本次 PASS=135 FAIL=0）
+
+**commit**：`<pending>`
+
+---
+
 ## v1.6 (2026-08-18)
 
 **类型**：bug 修复
