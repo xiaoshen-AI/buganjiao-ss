@@ -333,6 +333,7 @@ function resetAll(){
   setVal('.plate:nth-child(2) .pcols','3'); setVal('.plate:nth-child(2) .prows','4');
   setVal('.plate:nth-child(2) .pdemand','0');
   const cb2 = doc.querySelector('.plate:nth-child(2) .protate'); if (cb2.checked){ cb2.checked=false; cb2.dispatchEvent(new win.Event('input')); }
+  doc.getElementById('dirH').click();
 }
 
 // L1. firstValid：第一块板无效时，板间间隙不应对第二块有效板前置加
@@ -460,6 +461,28 @@ eq('切料边界 切料显示', doc.getElementById('sumCut').textContent, '切�
 setVal('.plate:nth-child(1) .pw', '20');
 // 板1 拼版宽=5*20+4*3=112mm，拼合=112+126+3=241mm，切料=251mm(<300) → 警告消失
 ok('切料也不超(241+10=251<300)→警告消失', doc.getElementById('sumWarn').style.display === 'none');
+
+
+// N. 复制按钮：一键复制当前板所有数据（含旋转状态）
+resetAll();  // 重置为2块默认板
+setVal('.plate:nth-child(1) .pw', '50');
+setVal('.plate:nth-child(1) .ph', '25');
+setVal('.plate:nth-child(1) .pcols', '6');
+setVal('.plate:nth-child(1) .prows', '7');
+setVal('.plate:nth-child(1) .pdemand', '1,000');
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+doc.querySelectorAll('.plate')[0].querySelector('.copyBtn').click();
+eq('复制后 板数+1', String(doc.querySelectorAll('.plate').length), '3');
+const nCopy = doc.querySelectorAll('.plate')[1];  // 复制板插在板1后，成为第2块
+eq('复制 成品宽', nCopy.querySelector('.pw').value, '50');
+eq('复制 成品高', nCopy.querySelector('.ph').value, '25');
+eq('复制 列数', nCopy.querySelector('.pcols').value, '6');
+eq('复制 行数', nCopy.querySelector('.prows').value, '7');
+eq('复制 需求(千分位)', nCopy.querySelector('.pdemand').value, '1,000');
+ok('复制 旋转状态继承', nCopy.querySelector('.protate').checked === true);
+eq('复制后 标题重排为拼板2', nCopy.querySelector('.ptitle').textContent, '拼板2');
+nCopy.querySelector('.delBtn').click();  // 清理恢复2块
+
 
 console.log('\n=== 结果 ===');
 console.log('PASS=' + pass + '  FAIL=' + fail);
