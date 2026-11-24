@@ -97,6 +97,9 @@ eq('fmtThousand(1001)', win.fmtThousand(1001n), '1.001');
 
 console.log('=== B. 初始状态（旧：尺寸/间隙/方向/切料/清单）===');
 const R0 = ref(3, 3, 'h', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
+// 显式把两块板需求数量归 0（HTML 默认已改为 100），以校验「无需求 → 印数：—」行为不被默认污染
+setVal('.plate:nth-child(1) .pdemand', '0');
+setVal('.plate:nth-child(2) .pdemand', '0');
 eq('板1 拼版尺寸', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + R0.fmt(R0.pout[0].tw) + ' × ' + R0.fmt(R0.pout[0].th) + ' mm');
 eq('板1 个数', doc.querySelector('.plate:nth-child(1) .pCount').textContent, '共 20 个');
 eq('板1 印数(无需求)', doc.querySelector('.plate:nth-child(1) .pPrint').textContent, '印数：—');
@@ -104,9 +107,10 @@ eq('板2 拼版尺寸', doc.querySelector('.plate:nth-child(2) .pResult').textCo
 eq('板2 个数', doc.querySelector('.plate:nth-child(2) .pCount').textContent, '共 12 个');
 eq('汇总 总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + R0.fmt(R0.totalW) + ' × ' + R0.fmt(R0.totalH) + ' mm   跳距：3mm');
 eq('汇总 切料', doc.getElementById('sumCut').textContent, '切料：' + R0.fmt(R0.totalW + 10000n) + ' × ' + R0.fmt(R0.totalH + 3000n) + ' mm'); // 横向：宽+10 高+gy(3mm)
-eq('汇总 清单', doc.getElementById('sumList').textContent, R0.list.join('\n'));
-eq('汇总 模数/印数(初始)', doc.getElementById('sumPrint').textContent, '模数：0个   印数：0');
-eq('汇总 整版模数/印数(初始)', doc.getElementById('sumPrintAll').textContent, '整版模数：0个   印数：0');
+{ const pills = doc.getElementById('sumList').querySelectorAll('.platePill');
+  ok('汇总 清单 胶囊数=板数且板1数据完整', pills.length === R0.list.length && /拼版1/.test(pills[0].textContent) && pills[0].textContent.indexOf('数量0个') >= 0 && pills[0].textContent.indexOf('mm') >= 0); }
+eq('汇总 模数/印数(初始)', doc.getElementById('sumPrint').textContent, '模数：0个\n印数：0');
+eq('汇总 整版模数/印数(初始)', doc.getElementById('sumPrintAll').textContent, '整版模数：0个\n印数：0');
 
 console.log('=== C. 改横间隙 gx=5（旧几何）===');
 setVal('#gx', '5');
@@ -116,6 +120,7 @@ eq('gx=5 切料', doc.getElementById('sumCut').textContent, '切料：' + R1.fmt
 
 console.log('=== D. 纵向拼版（旧方向）===');
 setVal('#gx', '3'); setVal('#gy', '3');
+setVal('.plate:nth-child(1) .prows', '5'); setVal('.plate:nth-child(2) .prows', '4');  // gy 现会触发重填；锁回原行数维持本节本意
 doc.getElementById('dirV').click();
 const R2 = ref(3, 3, 'v', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
 eq('纵向 总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + R2.fmt(R2.totalW) + ' × ' + R2.fmt(R2.totalH) + ' mm   跳距：3mm');
@@ -141,8 +146,8 @@ setVal('.plate:nth-child(1) .pdemand', '50');
 setVal('.plate:nth-child(2) .pdemand', '80');
 eq('板1 印数', doc.querySelector('.plate:nth-child(1) .pPrint').textContent, '印数：3');
 eq('板2 印数', doc.querySelector('.plate:nth-child(2) .pPrint').textContent, '印数：7');
-eq('汇总 模数/印数(单款)', doc.getElementById('sumPrint').textContent, '模数：12个   印数：7（数量84个）');
-eq('汇总 整版模数/印数', doc.getElementById('sumPrintAll').textContent, '整版模数：32个   印数：7（数量224个）');
+eq('汇总 模数/印数(单款)', doc.getElementById('sumPrint').textContent, '模数：12个（3x4）\n印数：7（数量84个）');
+eq('汇总 整版模数/印数', doc.getElementById('sumPrintAll').textContent, '整版模数：32个\n印数：7（数量224个）');
 
 console.log('=== F. 非法尺寸不崩溃（旧健壮性）===');
 let threw = false;
@@ -214,24 +219,28 @@ eq('旋转off 汇总尺寸', doc.getElementById("sumSizeText").textContent, '拼
 // 板1勾选旋转：30×40→40×30，tw=40*4+3*3=169, th=30*5+3*4=162
 { const cb = doc.querySelector('.plate:nth-child(1) .protate');
   cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '5');  // 勾旋转会触发自动填行数；锁回5以维持本节「纯宽高互换」测试本意
 const RJ1 = ref(3, 3, 'h', [{ w: 40, h: 30, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
 eq('旋转on 板1拼接', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + RJ1.fmt(RJ1.pout[0].tw) + ' × ' + RJ1.fmt(RJ1.pout[0].th) + ' mm');
 eq('旋转on 板1个数不变', doc.querySelector('.plate:nth-child(1) .pCount').textContent, '共 20 个');
 eq('旋转on 板2不变', doc.querySelector('.plate:nth-child(2) .pResult').textContent, '拼版：' + RJ1.fmt(RJ1.pout[1].tw) + ' × ' + RJ1.fmt(RJ1.pout[1].th) + ' mm');
 eq('旋转on 汇总尺寸', doc.getElementById("sumSizeText").textContent, '拼版：' + RJ1.fmt(RJ1.totalW) + ' × ' + RJ1.fmt(RJ1.totalH) + ' mm   跳距：3mm');
 eq('旋转on 切料', doc.getElementById('sumCut').textContent, '切料：' + RJ1.fmt(RJ1.totalW + 10000n) + ' × ' + RJ1.fmt(RJ1.totalH + 3000n) + ' mm');
-eq('旋转on sumList板1成品', doc.getElementById('sumList').textContent.split('\n')[0], '拼版1  共 20 个  数量0个（尺寸：40 x 30 mm）');
+{ const p = doc.getElementById('sumList').querySelectorAll('.platePill')[0];
+  ok('旋转on 板1成品尺寸', !!p && p.textContent.indexOf('40 x 30') >= 0 && p.textContent.indexOf('数量0个') >= 0); }
 ok('旋转on 示意图含旋转后尺寸', doc.getElementById('diagramSvg').innerHTML.indexOf('169×162') >= 0);
 
 // 取消旋转恢复
 { const cb = doc.querySelector('.plate:nth-child(1) .protate');
   cb.checked = false; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '5');  // 取消旋转同样触发自动填；锁回5维持本节本意
 eq('旋转off恢复 板1', doc.querySelector('.plate:nth-child(1) .pResult').textContent, '拼版：' + RJ0.fmt(RJ0.pout[0].tw) + ' × ' + RJ0.fmt(RJ0.pout[0].th) + ' mm');
 
 console.log('=== K. 扩展覆盖（新）===');
 
 // K1. 纵间隙 gy 响应：跳距取 gy、切料高=总高+gy
 setVal('#gy', '5');
+setVal('.plate:nth-child(1) .prows', '5'); setVal('.plate:nth-child(2) .prows', '4');  // gy 现会触发重填；锁回原行数维持「跳距取gy」本意
 const Rgy = ref(3, 5, 'h', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
 eq('gy=5 总尺寸(跳距取gy)', doc.getElementById("sumSizeText").textContent, '拼版：' + Rgy.fmt(Rgy.totalW) + ' × ' + Rgy.fmt(Rgy.totalH) + ' mm   跳距：5mm');
 eq('gy=5 切料(高=总高+gy)', doc.getElementById('sumCut').textContent, '切料：' + Rgy.fmt(Rgy.totalW + 10000n) + ' × ' + Rgy.fmt(Rgy.totalH + 5000n) + ' mm');
@@ -275,13 +284,16 @@ doc.querySelectorAll('.plate')[2].querySelector('.delBtn').click();
 // K6. 旋转 90° + 需求数量联动：n/模数/印数不变
 setVal('.plate:nth-child(1) .pdemand', '50');
 { const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '5');  // 旋转触发自动填；锁回5维持「旋转+需求联动」本意
 eq('旋转+需求 个数不变', doc.querySelector('.plate:nth-child(1) .pCount').textContent, '共 20 个');
 eq('旋转+需求 印数不变', doc.querySelector('.plate:nth-child(1) .pPrint').textContent, '印数：3');
 { const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked = false; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '5');  // 取消旋转同样锁回
 setVal('.plate:nth-child(1) .pdemand', '0');
 
 // K7. 间隙为 0 边界
 setVal('#gx', '0'); setVal('#gy', '0');
+setVal('.plate:nth-child(1) .prows', '5'); setVal('.plate:nth-child(2) .prows', '4');  // gy 现会触发重填；锁回原行数维持「跳距0」本意
 const R0g = ref(0, 0, 'h', [{ w: 30, h: 40, cols: 4, rows: 5, demand: 0 }, { w: 40, h: 30, cols: 3, rows: 4, demand: 0 }]);
 eq('gx=gy=0 总尺寸(跳距0)', doc.getElementById("sumSizeText").textContent, '拼版：' + R0g.fmt(R0g.totalW) + ' × ' + R0g.fmt(R0g.totalH) + ' mm   跳距：0mm');
 setVal('#gx', '3'); setVal('#gy', '3');
@@ -308,6 +320,9 @@ ok('整版模数行保持隐藏', doc.getElementById('sumPrintAll').style.displa
   let threw = false;
   try {
     Object.defineProperty(win.HTMLElement.prototype, 'offsetWidth', { configurable: true, get: function () { return 999; } });
+    // 量元素自身内容宽（含自身 padding 场景）：padding=0 时 avail = clientWidth
+    listEl.style.padding = '0px';
+    Object.defineProperty(listEl, 'clientWidth', { configurable: true, value: 100 });
     Object.defineProperty(listEl.parentNode, 'clientWidth', { configurable: true, value: 100 });
     win.fitMultiLine(listEl, 24, 12);
     ok('fitMultiLine 溢出→缩到下限12', parseInt(listEl.style.fontSize, 10) === 12);
@@ -351,6 +366,8 @@ doc.getElementById('dirH').click();
 // L2. totalH/totalW 取最大值的另一方向
 resetAll();
 setVal('.plate:nth-child(2) .ph','60');
+// 自动填行数会把行数改成 5；此处测的是 totalH 取最大值，显式锁回 4 保持测试本意
+setVal('.plate:nth-child(2) .prows','4');
 const RmaxH = ref(3,3,'h',[{w:30,h:40,cols:4,rows:5,demand:0},{w:40,h:60,cols:3,rows:4,demand:0}]);
 eq('横向 totalH 取板2(更高)', doc.getElementById("sumSizeText").textContent, '拼版：'+RmaxH.fmt(RmaxH.totalW)+' × '+RmaxH.fmt(RmaxH.totalH)+' mm   跳距：3mm');
 resetAll();
@@ -385,7 +402,7 @@ ok('超幅恢复后警告消失', doc.getElementById('sumWarn').style.display ==
 // L5. sumList 随 demand 同步
 resetAll();
 setVal('.plate:nth-child(1) .pdemand','50');
-ok('sumList 含 数量50个', doc.getElementById('sumList').textContent.split('\n')[0].indexOf('数量50个') >= 0);
+ok('sumList 含 数量50个', Array.from(doc.getElementById('sumList').querySelectorAll('.platePill')).some(function(p){ return p.textContent.indexOf('数量50个') >= 0; }));
 setVal('.plate:nth-child(1) .pdemand','0');
 
 // L6. demand 千分位（DOM 层）
@@ -397,6 +414,7 @@ setVal('.plate:nth-child(1) .pdemand','0');
 // L7. 旋转 + 纵向方向
 resetAll();
 { const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked=true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '5');  // 旋转触发自动填；锁回5维持本节本意
 doc.getElementById('dirV').click();
 const Rrv = ref(3,3,'v',[{w:40,h:30,cols:4,rows:5,demand:0},{w:40,h:30,cols:3,rows:4,demand:0}]);
 eq('旋转+纵向 累加', doc.getElementById("sumSizeText").textContent, '拼版：'+Rrv.fmt(Rrv.totalW)+' × '+Rrv.fmt(Rrv.totalH)+' mm   跳距：3mm');
@@ -471,6 +489,7 @@ setVal('.plate:nth-child(1) .pcols', '6');
 setVal('.plate:nth-child(1) .prows', '7');
 setVal('.plate:nth-child(1) .pdemand', '1,000');
 { const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows', '7');  // 旋转触发自动填；锁回7验证「复制继承行数」本意
 doc.querySelectorAll('.plate')[0].querySelector('.copyBtn').click();
 eq('复制后 板数+1', String(doc.querySelectorAll('.plate').length), '3');
 const nCopy = doc.querySelectorAll('.plate')[1];  // 复制板插在板1后，成为第2块
@@ -482,6 +501,118 @@ eq('复制 需求(千分位)', nCopy.querySelector('.pdemand').value, '1,000');
 ok('复制 旋转状态继承', nCopy.querySelector('.protate').checked === true);
 eq('复制后 标题重排为拼板2', nCopy.querySelector('.ptitle').textContent, '拼板2');
 nCopy.querySelector('.delBtn').click();  // 清理恢复2块
+
+
+// O. 输入成品高 → 行数自动填满（目标切料高 352mm；旋转按有效高度算）
+console.log('=== O. 成品高输入自动填满行数（新）===');
+resetAll();
+// 截图场景：gy=2、成品高 25、未旋转 → rows=floor(352000/(25000+2000))=13
+setVal('#gy','2');
+setVal('.plate:nth-child(1) .ph','25');
+eq('自动填行数 gy2 高25 未旋转=13', doc.querySelector('.plate:nth-child(1) .prows').value, '13');
+// 默认 gy=3、成品高 40 → rows=floor(352000/(40000+3000))=8
+setVal('#gy','3');
+setVal('.plate:nth-child(1) .ph','40');
+eq('自动填行数 gy3 高40=8', doc.querySelector('.plate:nth-child(1) .prows').value, '8');
+// 旋转 90°：有效高度取成品宽。板1 宽30 高40，勾旋转 → heff=30000 → rows=floor(352000/33000)=10
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked = true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .ph','99');   // 改成品高（旋转下不影响 heff），触发自动填用成品宽
+eq('自动填行数 旋转按成品宽30=10', doc.querySelector('.plate:nth-child(1) .prows').value, '10');
+// 非法高度 0 → 不动行数（保持上一次的 10）
+setVal('.plate:nth-child(1) .ph','0');
+eq('自动填行数 高0 不动', doc.querySelector('.plate:nth-child(1) .prows').value, '10');
+// 手动改行数不被自动填覆盖（prows 的 input 只重算、不重填）
+setVal('.plate:nth-child(1) .prows','7');
+eq('手动改行数保留不被覆盖', doc.querySelector('.plate:nth-child(1) .prows').value, '7');
+resetAll();  // 恢复标准态供后续（无后续，保险）
+
+
+// P. 纵向拼版：所有板行数统一，共同满足切料高 ≤ 352mm（截图场景）
+console.log('=== P. 纵向统一行数填满（新）===');
+resetAll();
+setVal('#gy','3');
+// 两块相同板 40×20、3列，横向输入成品高 → 各单板填满 15 行
+[1,2].forEach(function(i){
+  var s = '.plate:nth-child(' + i + ') ';
+  setVal(s + '.pw','40'); setVal(s + '.ph','20'); setVal(s + '.pcols','3');
+});
+eq('纵向前 板1 横向填满=15', doc.querySelector('.plate:nth-child(1) .prows').value, '15');
+eq('纵向前 板2 横向填满=15', doc.querySelector('.plate:nth-child(2) .prows').value, '15');
+// 切到纵向：15行总高 690mm 超幅 → 统一行数重算，Σ(heff+gy)=23+23=46 → N=floor(352000/46000)=7
+doc.getElementById('dirV').click();
+eq('纵向统一行数 板1=7', doc.querySelector('.plate:nth-child(1) .prows').value, '7');
+eq('纵向统一行数 板2=7', doc.querySelector('.plate:nth-child(2) .prows').value, '7');
+// 纵向总高：每板 th=7*20+6*3=158，totalH=158+3+158=319，切料高=319+3=322mm，不超幅
+ok('纵向统一行数后 切料高=322mm', doc.getElementById('sumCut').textContent.indexOf('322') >= 0);
+ok('纵向统一行数后 不超幅警告', doc.getElementById('sumWarn').style.display === 'none');
+// 纵向输入成品高：全体统一行数。板1 高改10(heff10)、板2 高20(heff20)，gy3 → Σ=13+23=36 → N=floor(352000/36000)=9，两板都9行
+setVal('.plate:nth-child(1) .ph','10');
+eq('纵向改高 板1=9(统一)', doc.querySelector('.plate:nth-child(1) .prows').value, '9');
+eq('纵向改高 板2=9(与板1一致)', doc.querySelector('.plate:nth-child(2) .prows').value, '9');
+ok('纵向改高后 两板行数相等', doc.querySelector('.plate:nth-child(1) .prows').value === doc.querySelector('.plate:nth-child(2) .prows').value);
+ok('纵向改高后 切料高=324mm', doc.getElementById('sumCut').textContent.indexOf('324') >= 0);
+ok('纵向改高后 不超幅', doc.getElementById('sumWarn').style.display === 'none');
+// 切回横向：不自动改行数（保留当前值，遵循"手改行数不被覆盖"）
+doc.getElementById('dirH').click();
+eq('切回横向 行数不动(板1=9)', doc.querySelector('.plate:nth-child(1) .prows').value, '9');
+resetAll();
+
+// Q. 勾选/取消旋转90° → 按旋转后有效高度自动重填行数（用户截图场景）
+console.log('=== Q. 旋转触发行数自动重填（新）===');
+resetAll();
+doc.querySelectorAll('.plate')[1].querySelector('.delBtn').click();  // 截图是单板，删板2避免横向宽度累加超300
+// 截图场景：成品宽71/高40、gy3、6列。改成品高40 时自动填 heff=40 → 8 行
+setVal('.plate:nth-child(1) .pw','71'); setVal('.plate:nth-child(1) .ph','40'); setVal('.plate:nth-child(1) .pcols','6');
+eq('旋转前 按成品高40=8行', doc.querySelector('.plate:nth-child(1) .prows').value, '8');
+// 勾旋转：heff=成品宽71 → rows=floor(352000/(71000+3000))=4，切料 265×296 不超幅
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked=true; cb.dispatchEvent(new win.Event('input')); }
+eq('勾旋转 按成品宽71=4行', doc.querySelector('.plate:nth-child(1) .prows').value, '4');
+ok('勾旋转后 拼版255×293', doc.querySelector('.plate:nth-child(1) .pResult').textContent.indexOf('255 × 293') >= 0);
+ok('勾旋转后 切料265×296不超幅', doc.getElementById('sumCut').textContent.indexOf('265 × 296') >= 0 && doc.getElementById('sumWarn').style.display === 'none');
+// 取消旋转：heff=成品高40 → rows=floor(352000/43000)=8，回到8行
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked=false; cb.dispatchEvent(new win.Event('input')); }
+eq('取消旋转 按成品高40=8行', doc.querySelector('.plate:nth-child(1) .prows').value, '8');
+// 纵向 + 旋转：两板都勾旋转（heff=30/40）后切纵向 → 全体统一 Σ(heff+gy)=76 → N=floor(352000/76000)=4
+resetAll();
+[1,2].forEach(function(i){ var cb = doc.querySelector('.plate:nth-child('+i+') .protate'); cb.checked=true; cb.dispatchEvent(new win.Event('input')); });
+doc.getElementById('dirV').click();
+eq('纵向旋转 板1=4', doc.querySelector('.plate:nth-child(1) .prows').value, '4');
+eq('纵向旋转 板2=4(统一)', doc.querySelector('.plate:nth-child(2) .prows').value, '4');
+ok('纵向旋转后 不超幅', doc.getElementById('sumWarn').style.display === 'none');
+resetAll();
+
+// R. 关联触发点补齐：旋转下改成品宽 / 改纵间隙gy / 纵向增删板 → 自动重填行数（新）
+console.log('=== R. 关联触发点自动重填（新）===');
+// R1. 旋转下改成品宽：有效高度=宽，改宽要重填；未旋转改宽不重填（不误伤手改行数）
+resetAll();
+doc.querySelectorAll('.plate')[1].querySelector('.delBtn').click();  // 单板，避免横向宽度累加
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked=true; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .pw','10');
+eq('旋转下改成品宽30→10=27行', doc.querySelector('.plate:nth-child(1) .prows').value, '27');
+// 未旋转改宽：有效高度仍是高，行数不动（保留手改值）
+{ const cb = doc.querySelector('.plate:nth-child(1) .protate'); cb.checked=false; cb.dispatchEvent(new win.Event('input')); }
+setVal('.plate:nth-child(1) .prows','3');  // 手改3行
+setVal('.plate:nth-child(1) .pw','25');
+eq('未旋转改宽 手改3行不动', doc.querySelector('.plate:nth-child(1) .prows').value, '3');
+// R2. 改纵间隙 gy：公式分母变，横向逐板重填
+resetAll();
+doc.querySelectorAll('.plate')[1].querySelector('.delBtn').click();
+setVal('.plate:nth-child(1) .ph','30');
+eq('gy3 高30=10行', doc.querySelector('.plate:nth-child(1) .prows').value, '10');
+setVal('#gy','30');
+eq('改gy3→30=5行', doc.querySelector('.plate:nth-child(1) .prows').value, '5');
+// R3. 纵向增删板：全体统一预算随板数变
+resetAll();
+[1,2].forEach(function(i){ var s='.plate:nth-child('+i+') '; setVal(s+'.pw','40'); setVal(s+'.ph','20'); setVal(s+'.prows','7'); });
+setVal('#gy','3'); doc.getElementById('dirV').click();
+eq('纵向2板 各7行', doc.querySelector('.plate:nth-child(1) .prows').value, '7');
+doc.querySelectorAll('.plate')[1].querySelector('.delBtn').click();
+eq('删1板 剩板=15行(Σ=23)', doc.querySelector('.plate:nth-child(1) .prows').value, '15');
+doc.getElementById('addBtn').click();
+eq('加1板 全体=6行(Σ=23+33=56)', doc.querySelector('.plate:nth-child(1) .prows').value, '6');
+eq('加1板 新板=6行(统一)', doc.querySelector('.plate:nth-child(2) .prows').value, '6');
+// 加的是默认40×30板，纵向宽度方向两板相加可能超300限，故不断言全局无警告；行数重算已由上面 eq 验证
+resetAll();
 
 
 console.log('\n=== 结果 ===');
