@@ -11,7 +11,7 @@
 #calcRight{margin-top:16px}
 input[type="text"],input[type="number"]{font-size:16px!important;min-height:38px}
 button{min-height:38px;font-size:14px!important}
-#sumSizeText,#sumCut,#sumList,#sumPrint{font-size:18px!important}
+#sumSizeText,#sumCut,#sumList,#sumPrint,#sumPlate{font-size:18px!important}
 #sumCheck{font-size:18px!important}
 h3{font-size:16px!important;margin-bottom:8px!important}
 #diagramSvg{padding:4px!important}
@@ -21,9 +21,22 @@ h3{font-size:16px!important;margin-bottom:8px!important}
 </head>
 <body style="margin:0;padding:12px;background:#fff;">
 <div style="max-width:920px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2937;">
+  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.8</span></h3>
   <div id="calcLayout" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
     <div id="calcLeft" style="flex:1 1 380px;min-width:300px;">
-  <h3 style="margin:0 0 10px;font-size:18px;">不干胶拼版总尺寸计算器（多尺寸） <span style="font-size:12px;color:#94a3b8;font-weight:400;">v1.7</span></h3>
+
+  <div style="background:#f1f5f9;border-radius:10px;padding:16px 18px;margin:0 0 14px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="sumSizeText" style="font-size:24px;font-weight:700;line-height:1.5;white-space:nowrap;">拼版：126 × 344 mm   跳距：3mm</span>
+      <button id="copySizeBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:3px 0;width:64px;box-sizing:border-box;flex:none;white-space:nowrap;text-align:center;cursor:pointer;">复制</button>
+    </div>
+    <div id="sumCut" style="font-size:24px;font-weight:700;line-height:1.6;margin-top:4px;white-space:nowrap;">切料：136 mm</div>
+    <div id="sumPlate" style="font-size:24px;font-weight:700;line-height:1.6;margin-top:4px;white-space:nowrap;display:none;"></div>
+    <div id="sumPrint" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:pre-line;">模数：0个   印数：0</div>
+    <div id="sumPrintAll" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:pre-line;display:none;">整版模数：0个   印数：0</div>
+    <div id="sumWarn" style="font-size:13px;font-weight:600;color:#dc2626;margin-top:6px;display:none;">⚠ 超出纸张最大 300×352</div>
+    <div id="sumCheck" style="display:none;font-size:24px;font-weight:700;color:#ea580c;margin-top:10px;white-space:nowrap;letter-spacing:0.5px;">检查：数量、尺寸、印色、模数、印数、尺寸切料</div>
+  </div>
 
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <label style="flex:1;font-size:13px;">横间隙 (mm)<br>
@@ -43,22 +56,10 @@ h3{font-size:16px!important;margin-bottom:8px!important}
   <div id="plates"></div>
 
   <button id="addBtn" style="margin:4px 0 16px;padding:8px 14px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;font-size:14px;cursor:pointer;">+ 添加拼板</button>
-
-  <div style="background:#f1f5f9;border-radius:10px;padding:16px 18px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span id="sumSizeText" style="font-size:24px;font-weight:700;line-height:1.5;white-space:nowrap;">拼版：126 × 344 mm   跳距：3mm</span>
-      <button id="copySizeBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:3px 10px;cursor:pointer;">复制</button>
-    </div>
-    <div id="sumCut" style="font-size:24px;font-weight:700;line-height:1.6;margin-top:4px;white-space:nowrap;">切料：136 mm</div>
-    <div id="sumList" style="font-size:24px;font-weight:700;line-height:1.6;white-space:pre-line;margin-top:4px;">拼版1  20 个
-拼版2  12 个</div>
-    <div id="sumPrint" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:nowrap;">模数：0个   印数：0</div>
-    <div id="sumPrintAll" style="font-size:24px;font-weight:700;line-height:1.6;color:#2563eb;margin-top:4px;white-space:nowrap;display:none;">整版模数：0个   印数：0</div>
-    <div id="sumWarn" style="font-size:13px;font-weight:600;color:#dc2626;margin-top:6px;display:none;">⚠ 超出纸张最大 300×352</div>
-    <div id="sumCheck" style="font-size:24px;font-weight:700;color:#ea580c;margin-top:10px;white-space:nowrap;letter-spacing:0.5px;">检查：数量、尺寸、印色、模数、印数、尺寸切料</div>
-  </div>
   </div>
   <div id="calcRight" style="flex:1 1 300px;min-width:260px;">
+    <div id="sumList" style="background:#f1f5f9;border-radius:10px;padding:16px 18px;line-height:1.2;margin:0 0 10px;">拼版1 共 20个 数量0个（尺寸：40 x 30 mm）
+拼版2  12 个</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;">
       <h3 style="margin:0;font-size:18px;">整版示意图</h3>
       <button id="printPdfBtn" type="button" style="font-size:13px;font-weight:600;color:#2563eb;background:#fff;border:1px solid #2563eb;border-radius:6px;padding:4px 12px;cursor:pointer;">导出刀模PDF(1:1)</button>
@@ -173,7 +174,17 @@ function addPlate(w, h, cols, rows, demand, rotate, beforeNode){
   if (beforeNode) { beforeNode.insertAdjacentHTML('afterend', html); p = beforeNode.nextElementSibling; }
   else { platesEl.insertAdjacentHTML('beforeend', html); p = platesEl.lastElementChild; }
   p.querySelectorAll('input').forEach(function(inp){
-    inp.addEventListener('input', recalc);
+    inp.addEventListener('focus', function(){ inp.select(); });
+    inp.addEventListener('input', function(){
+      // 有效高度 = 旋转 ? 成品宽 : 成品高。故改成品高、勾旋转、及「旋转下改成品宽」都要重填；
+      // 未旋转时改宽不进高度公式，不重填（避免误覆盖手改行数）。
+      var isPwOnRotate = inp.classList.contains('pw') && p.querySelector('.protate').checked;
+      if (inp.classList.contains('ph') || inp.classList.contains('protate') || isPwOnRotate) {
+        if (dir === 'v') autoFillRowsAll();                 // 纵向：所有板统一行数填满 352mm
+        else autoFillRows(p);                               // 横向：单板填满，旋转按有效高度算
+      }
+      recalc();
+    });
     if (inp.classList.contains('pw') || inp.classList.contains('ph')) {
       inp.addEventListener('blur', function(){
         var v = parseFloat(inp.value);
@@ -184,6 +195,7 @@ function addPlate(w, h, cols, rows, demand, rotate, beforeNode){
   p.querySelector('.delBtn').addEventListener('click', function(){
     if(platesEl.children.length <= 1) return;
     p.remove();
+    if (dir === 'v') autoFillRowsAll();   // 纵向：板数变了→统一行数预算重算
     recalc();
   });
   p.querySelector('.copyBtn').addEventListener('click', function(){
@@ -198,11 +210,68 @@ function addPlate(w, h, cols, rows, demand, rotate, beforeNode){
   recalc();
 }
 
+// 输入成品高后自动填满行数：单板拼版高 th=rows*heff+(rows-1)*gy；横向单板切料高=th+gy=rows*(heff+gy)。
+// 目标切料高 ≤ 352mm（与超幅阈值一致）→ rows = floor(352000 / (heff+gy))，heff=旋转 ? 成品宽 : 成品高。
+function autoFillRows(p){
+  var w = toThousand(p.querySelector('.pw').value);
+  var h = toThousand(p.querySelector('.ph').value);
+  var gy = toThousand(gyEl.value);
+  var rotate = p.querySelector('.protate').checked;
+  var heff = rotate ? w : h;                 // 旋转 90° 后宽高互换，高度方向取成品宽
+  if (heff <= 0n || heff + gy <= 0n) return; // 高度非法/间隙异常 → 不动行数
+  var rows = 352000n / (heff + gy);          // BigInt 整除即 floor；目标切料高 352mm
+  if (rows < 1n) rows = 1n;                  // 至少 1 行
+  p.querySelector('.prows').value = String(rows);
+}
+
+// 纵向拼版：总高是各板高度相加，切料高 = totalH + gy = Σ[rows_i*(heff_i+gy)]。
+// 用户要求「所有板行数一样」→ 统一行数 N：切料高 = N * Σ(heff_i+gy) ≤ 352mm
+// → N = floor(352000 / Σ(heff_i+gy))，所有有效板填同一个 N。
+function autoFillRowsAll(){
+  var gy = toThousand(gyEl.value);
+  var eff = [], sumUnit = 0n;
+  platesEl.querySelectorAll('.plate').forEach(function(p){
+    var w = toThousand(p.querySelector('.pw').value);
+    var h = toThousand(p.querySelector('.ph').value);
+    var rotate = p.querySelector('.protate').checked;
+    var heff = rotate ? w : h;               // 旋转后高度方向取成品宽
+    var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
+    if (heff > 0n && cols > 0 && heff + gy > 0n) {
+      eff.push(p);
+      sumUnit += heff + gy;                  // 每板贡献一个单位的高度
+    }
+  });
+  if (!eff.length || sumUnit <= 0n) return;
+  var rows = 352000n / sumUnit;              // BigInt 整除即 floor；目标切料高 352mm
+  if (rows < 1n) rows = 1n;                  // 至少 1 行
+  eff.forEach(function(p){ p.querySelector('.prows').value = String(rows); });
+}
+
+// 当前（纵向）布局下的总切料高，用于判断切方向时是否需要重新平分填行
+function verticalCutH(){
+  var gy = toThousand(gyEl.value);
+  var totalH = 0n, firstValid = true;
+  platesEl.querySelectorAll('.plate').forEach(function(p){
+    var w = toThousand(p.querySelector('.pw').value);
+    var h = toThousand(p.querySelector('.ph').value);
+    var rotate = p.querySelector('.protate').checked;
+    if (rotate) { var t = w; w = h; h = t; }
+    var cols = parseInt(p.querySelector('.pcols').value, 10) || 0;
+    var rows = parseInt(p.querySelector('.prows').value, 10) || 0;
+    if (w > 0n && h > 0n && cols > 0 && rows > 0) {
+      var th = BigInt(rows) * h + BigInt(rows - 1) * gy;
+      totalH += th + (firstValid ? 0n : gy);
+      firstValid = false;
+    }
+  });
+  return totalH + gy;
+}
+
 function recalc(){
   var gx = toThousand(gxEl.value);
   var gy = toThousand(gyEl.value);
   var plates = platesEl.querySelectorAll('.plate');
-  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0, totalModulus = 0n;
+  var totalW = 0n, totalH = 0n, list = [], firstValid = true, maxPrint = 0n, maxPrintIdx = 0, maxPrintN = 0, maxPrintCols = 0, maxPrintRows = 0, totalModulus = 0n;
   plates.forEach(function(p, i){
     p.querySelector('.ptitle').textContent = '拼板' + (i + 1);
     var w = toThousand(p.querySelector('.pw').value);
@@ -221,7 +290,7 @@ function recalc(){
       totalModulus += BigInt(n);
       if (demand > 0n) {
         print = (demand + BigInt(n) - 1n) / BigInt(n);   // 向上取整
-        if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; }
+        if (print > maxPrint) { maxPrint = print; maxPrintIdx = i + 1; maxPrintN = n; maxPrintCols = cols; maxPrintRows = rows; }
       }
       if (dir === 'h') {
         totalW = totalW + tw + (firstValid ? 0n : gx);
@@ -235,7 +304,7 @@ function recalc(){
     p.querySelector('.pResult').textContent = '拼版：' + fmtThousand(tw) + ' × ' + fmtThousand(th) + ' mm';
     p.querySelector('.pCount').textContent = '共 ' + n + ' 个';
     p.querySelector('.pPrint').textContent = '印数：' + ((valid && demand > 0n) ? String(print) : '—');
-    list.push('拼版' + (i + 1) + '  共 ' + n + ' 个  数量' + String(demand) + '个（尺寸：' + fmtThousand(w) + ' x ' + fmtThousand(h) + ' mm）');
+    list.push({ n: n, demand: String(demand), w: fmtThousand(w), h: fmtThousand(h) });
   });
   var dispW = totalW;
   var dispH = totalH;
@@ -243,17 +312,31 @@ function recalc(){
   var cutW = totalW + 10000n;
   var cutH = totalH + gy;
   document.getElementById('sumCut').textContent = '切料：' + fmtThousand(cutW) + ' × ' + fmtThousand(cutH) + ' mm';
-  document.getElementById('sumList').textContent = list.join('\n');
+  document.getElementById('sumList').innerHTML = list.map(function(item, idx){
+    var hi = (maxPrintIdx > 0 && (idx + 1) === maxPrintIdx);
+    var st = hi
+      ? 'display:inline-block;background:#2563eb;border:1px solid #2563eb;border-radius:999px;padding:5px 13px;margin:5px 7px 0 0;font-size:15px;font-weight:700;color:#fff;white-space:nowrap;'
+      : 'display:inline-block;background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:5px 13px;margin:5px 7px 0 0;font-size:15px;font-weight:700;color:#1f2937;white-space:nowrap;';
+    return '<span class="platePill" style="' + st + '">拼版' + (idx+1) + ' · 共' + item.n + '个 · 数量' + item.demand + '个 · ' + item.w + ' x ' + item.h + ' mm</span>';
+  }).join('');
   var printText, printAllText;
   if (maxPrintIdx > 0 && maxPrint > 0n) {
-    printText = '模数：' + String(maxPrintN) + '个   印数：' + String(maxPrint) + '（数量' + String(BigInt(maxPrintN) * maxPrint) + '个）';
-    printAllText = '整版模数：' + String(totalModulus) + '个   印数：' + String(maxPrint) + '（数量' + String(totalModulus * maxPrint) + '个）';
+    printText = '模数：' + String(maxPrintN) + '个（' + maxPrintCols + 'x' + maxPrintRows + '）\n印数：' + String(maxPrint) + '（数量' + String(BigInt(maxPrintN) * maxPrint) + '个）';
+    printAllText = '整版模数：' + String(totalModulus) + '个\n印数：' + String(maxPrint) + '（数量' + String(totalModulus * maxPrint) + '个）';
   } else {
-    printText = '模数：0个   印数：0';
-    printAllText = '整版模数：0个   印数：0';
+    printText = '模数：0个\n印数：0';
+    printAllText = '整版模数：0个\n印数：0';
   }
   document.getElementById('sumPrint').textContent = printText;
   document.getElementById('sumPrintAll').textContent = printAllText;
+  var plateEl = document.getElementById('sumPlate');
+  if (maxPrintIdx > 0 && list.length >= maxPrintIdx) {
+    var pItem = list[maxPrintIdx - 1];
+    plateEl.textContent = '尺寸：' + pItem.w + ' x ' + pItem.h + ' mm・拼版' + maxPrintIdx;
+    plateEl.style.display = 'block';
+  } else {
+    plateEl.style.display = 'none';
+  }
   var warnEl = document.getElementById('sumWarn');
   // 超幅阈值随纸张方向互换：横向纸不转 300×352；纵向纸转90°后整版宽高互换，显示尺寸(总高×总宽)对应纸张 352×300，故判定 总宽≤300、总高≤352
   var overW, overH, overText;
@@ -273,7 +356,6 @@ function recalc(){
   // 结果卡片各行：一行放不下时自动缩小字号（下限 12px），保证单行不折行
   fitSpanLine(document.getElementById('sumSizeText'), 24, 12);
   fitBlockLine(document.getElementById('sumCut'), 24, 12);
-  fitMultiLine(document.getElementById('sumList'), 24, 12);
   fitBlockLine(document.getElementById('sumPrint'), 24, 12);
   fitBlockLine(document.getElementById('sumPrintAll'), 24, 12);
   fitBlockLine(document.getElementById('sumCheck'), 24, 10);
@@ -323,10 +405,14 @@ function fitSpanLine(el, base, minPx) {
 }
 // 多行块（清单 sumList，pre-line 保留换行）：取最宽行测量，缩到最宽行能单行放下
 function fitMultiLine(el, base, minPx) {
-  var parent = el.parentNode;
-  var pcs = getComputedStyle(parent);
-  var avail = parent.clientWidth - (parseFloat(pcs.paddingLeft) + parseFloat(pcs.paddingRight));
-  if (!(avail > 0)) avail = parent.clientWidth;
+  var cs = getComputedStyle(el);
+  var avail = el.clientWidth - (parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight));
+  if (!(avail > 0)) {
+    var parent = el.parentNode;
+    var pcs = getComputedStyle(parent);
+    avail = parent.clientWidth - (parseFloat(pcs.paddingLeft) + parseFloat(pcs.paddingRight));
+    if (!(avail > 0)) avail = parent.clientWidth;
+  }
   var probe = fitProbe();
   var cs = getComputedStyle(el);
   probe.style.fontFamily = cs.fontFamily;
@@ -385,17 +471,20 @@ function drawDiagram(){
       first = false;
     });
     var colors = ['#3b82f6','#16a34a','#9333ea','#ea580c','#0891b2','#db2777'];
-    var AREAW = 320, AREAH = 408, padX = 18, padTop = 12, padBottom = 10;
+    var AREAW = 320, padX = 18, padTop = 12, padBottom = 10;
+    // 宽度方向固定 320（与纸张横向参考对齐）；高度方向按内容自适应（见下方 AREAH 动态计算）
     var USE_PATTERN = 30; // 单板格数 >30 时用 <pattern> 批量渲染
     var svg = '';
     if (TW > 0 && TH > 0) {
       // 整版按纸张自然朝向绘制：横向=左右并排(底部对齐)，纵向=上下堆叠(板1在上、板2在下)
       // 仅「拼版排列方向」旋转，纸张与单板本身不旋转（不把整图翻成横版）
       var drawTW = TW, drawTH = TH;
-      var drawW = AREAW - 2 * padX, drawH = AREAH - padTop - padBottom;
-      var scale = Math.min(drawW / drawTW, drawH / drawTH);
+      var drawW = AREAW - 2 * padX;                  // 固定 284，宽度方向基准
+      var baseDrawH = 408 - padTop - padBottom;      // 386，仅用于定缩放上限，防超高版溢出
+      var scale = Math.min(drawW / drawTW, baseDrawH / drawTH);
       var bw = drawTW * scale, bh = drawTH * scale;
-      var bx = padX + (drawW - bw) / 2, by = padTop + (drawH - bh);
+      var AREAH = bh + padTop + padBottom;           // 高度随内容自适应：图框贴合整版
+      var bx = padX + (drawW - bw) / 2, by = padTop;  // 水平居中、顶部起绘（纵向无多余空白）
       // 预计算每块拼板的绘制坐标，供 defs 和主循环共用
       var drawList = [];
       raw.forEach(function(b, i){
@@ -457,11 +546,11 @@ function copyText(t){
   var done = function(){
     var btn = document.getElementById('copySizeBtn');
     if (!btn) return;
-    var old = btn.textContent;
     btn.textContent = '已复制✓';
     btn.style.color = '#16a34a';
     btn.style.borderColor = '#16a34a';
-    setTimeout(function(){ btn.textContent = old; btn.style.color = '#2563eb'; btn.style.borderColor = '#2563eb'; }, 1200);
+    if (btn._copyTimer) clearTimeout(btn._copyTimer);
+    btn._copyTimer = setTimeout(function(){ btn.textContent = '复制'; btn.style.color = '#2563eb'; btn.style.borderColor = '#2563eb'; }, 1200);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(t).then(done).catch(function(){ fallbackCopy(t, done); });
@@ -557,7 +646,14 @@ function escapeHtml(s){
 }
 
 gxEl.oninput = recalc;
-gyEl.oninput = recalc;
+gyEl.oninput = function(){
+  // 纵间隙 gy 进自动填公式 (heff+gy)，改它要重填行数：横向逐板单填、纵向全体统一
+  if (dir === 'v') autoFillRowsAll();
+  else platesEl.querySelectorAll('.plate').forEach(autoFillRows);
+  recalc();
+};
+gxEl.addEventListener('focus', function(){ gxEl.select(); });
+gyEl.addEventListener('focus', function(){ gyEl.select(); });
 function setDir(d){
   dir = d;
   var h = document.getElementById('dirH'), v = document.getElementById('dirV');
@@ -568,14 +664,20 @@ function setDir(d){
     v.style.background = '#3b82f6'; v.style.color = '#fff'; v.style.borderColor = '#3b82f6';
     h.style.background = '#fff';   h.style.color = '#1f2937'; h.style.borderColor = '#cbd5e1';
   }
+  // 切到纵向时：若当前行数会让整版超幅，则按全部板平分 352mm 重算行数（横向不动行数，保留手填值）
+  if (d === 'v' && verticalCutH() > 352000n) autoFillRowsAll();
   recalc();
 }
 document.getElementById('dirH').onclick = function(){ setDir('h'); };
 document.getElementById('dirV').onclick = function(){ setDir('v'); };
-document.getElementById('addBtn').onclick = function(){ addPlate(40, 30, 1, 1, 0); };
+var DEFAULT_DEMAND = 100;   // 需求数量默认值（个）：打开即 100，「+」新增板亦 100
+document.getElementById('addBtn').onclick = function(){
+  addPlate(40, 30, 1, 1, DEFAULT_DEMAND);
+  if (dir === 'v') autoFillRowsAll();   // 纵向：板数变了→统一行数预算重算
+};
 if (!platesEl.children.length) {
-  addPlate(30, 40, 4, 5, 0);
-  addPlate(40, 30, 3, 4, 0);
+  addPlate(30, 40, 4, 5, DEFAULT_DEMAND);
+  addPlate(40, 30, 3, 4, DEFAULT_DEMAND);
 }
 </script>
 </body>
